@@ -5,7 +5,9 @@ import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.view.Gravity;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -19,10 +21,23 @@ import android.widget.Toast;
  */
 public final class QuickSettingsActivity extends Activity {
 
+    /** Where to hang the panel, in screen px, when Home's button bar is not at the right edge (top_menu). */
+    static final String EXTRA_LEFT = "com.gathin.tvhome.extra.PANEL_LEFT";
+    static final String EXTRA_TOP = "com.gathin.tvhome.extra.PANEL_TOP";
+
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         setContentView(R.layout.activity_quick_settings);
+        if (getIntent().hasExtra(EXTRA_LEFT)) {
+            View panel = findViewById(R.id.panel);
+            FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) panel.getLayoutParams();
+            lp.gravity = Gravity.TOP | Gravity.START;
+            lp.leftMargin = getIntent().getIntExtra(EXTRA_LEFT, 0);
+            lp.topMargin = getIntent().getIntExtra(EXTRA_TOP, lp.topMargin);
+            lp.setMarginEnd(0);
+            panel.setLayoutParams(lp);
+        }
         findViewById(R.id.scrim).setOnClickListener(v -> finish());
         LinearLayout rows = findViewById(R.id.rows);
         addRow(rows, R.drawable.ic_settings, R.string.tv_settings, 0, new Intent(Settings.ACTION_SETTINGS));

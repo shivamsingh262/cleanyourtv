@@ -123,6 +123,11 @@
     <!-- With icon_only_buttons: Inputs as a round icon button too, so the top bar is three icons on the right.
          Its name moves to the talkback description like the others'. -->
     <bool name="inputs_icon_only">false</bool>
+    <!-- One round menu button just after the date instead of the buttons at the right edge: pressing it slides out
+         Inputs, Wi-Fi and Settings beside it, and pressing it again, Back, or going down to the apps closes them.
+         Frees the top right of Home (for the On this day print). Off by default; works best with
+         icon_only_buttons and inputs_icon_only. -->
+    <bool name="top_menu">false</bool>
     <!-- The app library as a round button in the top bar, beside Settings (app_library must be on too). -->
     <bool name="library_button">false</bool>
     <!-- With icon_only_buttons: keep the network name on the Wi-Fi pill up to this width in dp, cut with an ellipsis.

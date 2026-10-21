@@ -59,6 +59,8 @@ final class HomeInfo {
     private static final String SEP = "  ·  ";
     /** The print's photo, dp: a landscape photo's width, a portrait one's height. */
     private static final int MEMORY_LANDSCAPE_W_DP = 196, MEMORY_PORTRAIT_H_DP = 150;
+    /** With top_menu the top right is free: a larger print near the top, its heading written in the strip. */
+    private static final int OPEN_LANDSCAPE_W_DP = 236, OPEN_PORTRAIT_H_DP = 210, OPEN_TOP_DP = 40;
     /** The date tools/photos.sh puts in each name: photo-0007-20231202.jpg, or only the month, -202312. */
     private static final Pattern NAME_DATE = Pattern.compile("-(\\d{4})(\\d{2})(\\d{2})?\\.[A-Za-z]+$");
 
@@ -79,6 +81,8 @@ final class HomeInfo {
     /** Whether the top shelf is showing, so a print that loads later knows whether to appear. */
     private boolean shelfShown;
     private boolean memoryFound;
+    /** config.xml top_menu: the print has the top right to itself (see OPEN_*). */
+    private final boolean roomy;
 
     HomeInfo(Activity activity) {
         this.activity = activity;
@@ -105,6 +109,16 @@ final class HomeInfo {
         weatherOn = lineOn && activity.checkSelfPermission(android.Manifest.permission.INTERNET)
                 == android.content.pm.PackageManager.PERMISSION_GRANTED;
         memoryOn = res.getBoolean(R.bool.on_this_day) && memory != null;
+        roomy = res.getBoolean(R.bool.top_menu);
+        if (memoryOn && roomy) {
+            ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) memory.getLayoutParams();
+            lp.topMargin = Math.round(OPEN_TOP_DP * res.getDisplayMetrics().density);
+            memory.setLayoutParams(lp);
+            memoryKicker.setVisibility(View.GONE);
+            // "Oct 2024 · 2 years ago" is wider than a portrait print's strip: shrink to fit rather than cut.
+            memoryDate.setMaxLines(1);
+            memoryDate.setAutoSizeTextTypeUniformWithConfiguration(11, 17, 1, android.util.TypedValue.COMPLEX_UNIT_SP);
+        }
     }
 
     void start() {
@@ -344,15 +358,17 @@ final class HomeInfo {
         if (size == null) return;
         int w, h;
         if (size[1] > size[0]) {
-            h = Math.round(MEMORY_PORTRAIT_H_DP * density);
+            h = Math.round((roomy ? OPEN_PORTRAIT_H_DP : MEMORY_PORTRAIT_H_DP) * density);
             w = Math.round(h * (float) size[0] / size[1]);
         } else {
-            w = Math.round(MEMORY_LANDSCAPE_W_DP * density);
+            w = Math.round((roomy ? OPEN_LANDSCAPE_W_DP : MEMORY_LANDSCAPE_W_DP) * density);
             h = Math.round(w * (float) size[1] / size[0]);
         }
         Bitmap bitmap = PhotoDream.decode(pick, w, h);
         if (bitmap == null) return;
-        main.post(() -> setMemory(bitmap, head, date, w, h));
+        // Roomy: no line above the print, so "how long ago" joins the date in the strip ("Oct 2024 · 2 years ago").
+        String strip = roomy ? date + " · " + ago : date;
+        main.post(() -> setMemory(bitmap, head, strip, w, h));
     }
 
     private void setMemory(Bitmap bitmap, String head, String date, int w, int h) {

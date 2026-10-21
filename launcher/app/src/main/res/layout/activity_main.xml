@@ -154,7 +154,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="top|end"
         android:layout_marginTop="124dp"
-        android:layout_marginEnd="80dp"
+        android:layout_marginEnd="56dp"
         android:orientation="vertical"
         android:gravity="center_horizontal"
         android:alpha="0"
@@ -381,6 +381,15 @@
                 android:clipChildren="false"
                 android:clipToPadding="false"
                 android:orientation="horizontal">
+
+                <!-- top_menu only: one button that opens and closes the three below; gone otherwise. -->
+                <TextView
+                    android:id="@+id/btnMenu"
+                    style="@style/TopButtonIcon"
+                    android:visibility="gone"
+                    android:contentDescription="@string/top_menu"
+                    android:drawableStart="@drawable/ic_menu_more"
+                    android:nextFocusDown="@+id/grid" />
 
                 <TextView
                     android:id="@+id/btnInputs"

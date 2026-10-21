@@ -341,6 +341,15 @@
                     android:drawableStart="@drawable/ic_wifi"
                     android:nextFocusDown="@+id/grid" />
 
+                <!-- top_menu only: one button that opens and closes the three below; gone otherwise. -->
+                <TextView
+                    android:id="@+id/btnMenu"
+                    style="@style/TopButtonIcon"
+                    android:visibility="gone"
+                    android:contentDescription="@string/top_menu"
+                    android:drawableStart="@drawable/ic_menu_more"
+                    android:nextFocusDown="@+id/grid" />
+
                 <TextView
                     android:id="@+id/btnInputs"
                     style="@style/TopButton"

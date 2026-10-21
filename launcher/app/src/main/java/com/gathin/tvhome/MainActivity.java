@@ -60,6 +60,7 @@ import android.view.animation.LayoutAnimationController;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.PopupWindow;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -521,7 +522,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             return true;
         });
         // settings_key_panel also covers the pill, so the remote button and the pill open the same thing.
-        btnSettings.setOnClickListener(v -> open(settingsKeyPanel ? new Intent(this, QuickSettingsActivity.class)
+        btnSettings.setOnClickListener(v -> open(settingsKeyPanel ? quickSettingsIntent()
                 : systemIntent(Settings.ACTION_SETTINGS)));
         btnReorder = findViewById(R.id.btnReorder);
         btnReorder.setOnClickListener(v -> toggleReorder());
@@ -542,6 +543,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             inputsIconOnly = getResources().getBoolean(R.bool.inputs_icon_only);
             if (inputsIconOnly) makeIconOnly((TextView) btnInputs);
         }
+        networkPillShown = cfg.showNetworkPill;
+        btnMenu = findViewById(R.id.btnMenu);
+        topMenu = getResources().getBoolean(R.bool.top_menu) && btnMenu != null;
+        if (topMenu) setUpTopMenu();
         btnSettings.setOnLongClickListener(v -> {
             showSettingsMenu();
             return true;
@@ -552,19 +557,27 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         boolean rtlMenuBar = getResources().getBoolean(R.bool.rtl_menu_bar);
         View.OnKeyListener pillKeys = (v, keyCode, event) -> {
             if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+            if (topMenu && barOpen && keyCode == KeyEvent.KEYCODE_BACK) {
+                setBarOpen(false, true);
+                return true;
+            }
             if (keyCode == KeyEvent.KEYCODE_DPAD_UP) return true;
             if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+                if (topMenu && barOpen) setBarOpen(false, false);
                 // Back to the dock tile Up came from, not wherever the focus finder lands.
                 focusTile(lastFocused % COLUMNS);
                 return true;
             }
-            int firstButton = btnInputs.getVisibility() == View.VISIBLE ? R.id.btnInputs : firstTopButton().getId();
-            int leftButton = rtlMenuBar ? R.id.btnSettings : firstButton;
-            int rightButton = rtlMenuBar ? firstButton : R.id.btnSettings;
+            int firstButton = topMenu ? R.id.btnMenu
+                    : btnInputs.getVisibility() == View.VISIBLE ? R.id.btnInputs : firstTopButton().getId();
+            int lastButton = topMenu && !barOpen ? R.id.btnMenu : R.id.btnSettings;
+            int leftButton = rtlMenuBar ? lastButton : firstButton;
+            int rightButton = rtlMenuBar ? firstButton : lastButton;
             if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) return v.getId() == leftButton;
             return keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && v.getId() == rightButton;
         };
         btnInputs.setOnKeyListener(pillKeys);
+        if (btnMenu != null) btnMenu.setOnKeyListener(pillKeys);
         btnWifi.setOnKeyListener(pillKeys);
         btnSettings.setOnKeyListener(pillKeys);
         btnReorder.setOnKeyListener(pillKeys);
@@ -804,6 +817,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         handler.removeCallbacks(minuteTick);
         stopStats();
         homeInfo.stop();
+        if (topMenu && barOpen) setBarOpen(false, false);
         if (diya != null) diya.stop();
         cancelPendingFocusScroll();
         // Nothing of ours stays on screen over another app; an undecided prompt simply returns next time.
@@ -2109,12 +2123,75 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private boolean wifiIconOnly;
     /** config.xml inputs_icon_only (with icon_only_buttons): Inputs is a round icon, its menu hangs from the bar's end. */
     private boolean inputsIconOnly;
+    /** config.xml top_menu: one menu button beside the date opens and closes Inputs, the network pill and Settings. */
+    private boolean topMenu;
+    /** With top_menu: whether the three buttons are out. Without it they always are. */
+    private boolean barOpen = true;
+    /** Whether the TV has inputs to show (updateInputsButton); with top_menu the button also needs barOpen. */
+    private boolean inputsAvailable;
+    private boolean networkPillShown;
+    private TextView btnMenu;
     /** The app library button in the top bar (library_button). */
     private View btnLibraryTop;
     /** The open library came from that button: closing it returns there instead of scrolling to the grid's end. */
     private boolean libraryFromTopBar;
 
     /** Turns a labelled top pill into the round TopButtonIcon shape: no text, the icon centred by even padding. */
+    /**
+     * top_menu: the button bar moves from the right edge to just after the date, and only the menu button shows
+     * until it is pressed. The date column stops stretching so the bar can follow it.
+     */
+    private void setUpTopMenu() {
+        View left = findViewById(R.id.leftBlock);
+        RelativeLayout.LayoutParams lp = (RelativeLayout.LayoutParams) left.getLayoutParams();
+        lp.width = ViewGroup.LayoutParams.WRAP_CONTENT;
+        lp.removeRule(RelativeLayout.START_OF);
+        lp.removeRule(RelativeLayout.LEFT_OF);
+        left.setLayoutParams(lp);
+        View dateColumn = (View) findViewById(R.id.date).getParent();
+        LinearLayout.LayoutParams dp = (LinearLayout.LayoutParams) dateColumn.getLayoutParams();
+        dp.width = ViewGroup.LayoutParams.WRAP_CONTENT;
+        dp.weight = 0;
+        dateColumn.setLayoutParams(dp);
+        View bar = findViewById(R.id.topButtons);
+        RelativeLayout.LayoutParams bp = (RelativeLayout.LayoutParams) bar.getLayoutParams();
+        bp.removeRule(RelativeLayout.ALIGN_PARENT_END);
+        bp.removeRule(RelativeLayout.ALIGN_PARENT_RIGHT);
+        bp.addRule(RelativeLayout.END_OF, R.id.leftBlock);
+        bp.setMarginStart(Math.round(14 * density));
+        bar.setLayoutParams(bp);
+        btnMenu.setVisibility(View.VISIBLE);
+        btnMenu.setOnClickListener(v -> setBarOpen(!barOpen, true));
+        setBarOpen(false, false);
+    }
+
+    /** top_menu: shows or hides Inputs, the network pill and Settings beside the menu button. */
+    private void setBarOpen(boolean open, boolean moveFocus) {
+        barOpen = open;
+        btnInputs.setVisibility(open && inputsAvailable ? View.VISIBLE : View.GONE);
+        btnWifi.setVisibility(open && networkPillShown ? View.VISIBLE : View.GONE);
+        findViewById(R.id.btnSettings).setVisibility(open ? View.VISIBLE : View.GONE);
+        btnMenu.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                open ? R.drawable.ic_menu_close : R.drawable.ic_menu_more, 0, 0, 0);
+        if (!moveFocus) return;
+        if (!open) btnMenu.requestFocus();
+        else if (btnInputs.getVisibility() == View.VISIBLE) btnInputs.requestFocus();
+        else firstTopButton().requestFocus();
+    }
+
+    /** The quick settings panel; opened from the bar beside the date, it is told to hang under the bar there. */
+    private Intent quickSettingsIntent() {
+        Intent i = new Intent(this, QuickSettingsActivity.class);
+        if (topMenu) {
+            View bar = findViewById(R.id.topButtons);
+            int[] at = new int[2];
+            bar.getLocationOnScreen(at);
+            i.putExtra(QuickSettingsActivity.EXTRA_LEFT, at[0]);
+            i.putExtra(QuickSettingsActivity.EXTRA_TOP, at[1] + bar.getHeight() + Math.round(10 * density));
+        }
+        return i;
+    }
+
     private void makeIconOnly(TextView pill) {
         pill.setContentDescription(pill.getText());
         pill.setText(null);
@@ -2211,7 +2288,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 }
             }
         }
-        btnInputs.setVisibility(any ? View.VISIBLE : View.GONE);
+        inputsAvailable = any;
+        btnInputs.setVisibility(any && barOpen ? View.VISIBLE : View.GONE);
     }
 
     /** The Live TV app's launch intent: its leanback entry point, or the configured action if it has none. */
@@ -2278,7 +2356,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         // A round Inputs icon is too narrow to hang a menu from: it hangs from the end of the button bar instead,
         // lined up with the Settings icon, rather than running off the right edge of the screen.
-        View anchor = findViewById(inputsIconOnly ? R.id.topButtons : R.id.btnInputs);
+        View anchor = findViewById(inputsIconOnly || topMenu ? R.id.topButtons : R.id.btnInputs);
         View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
         LinearLayout rows = panel.findViewById(R.id.rows);
 
@@ -2413,7 +2491,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
         popup.setWidth(Math.max(width, Math.min(panel.getMeasuredWidth(), (int) (360 * density))));
 
-        int alignment = inputsIconOnly || getResources().getBoolean(R.bool.rtl_menu_bar) ? Gravity.END : Gravity.START;
+        // With top_menu the bar sits beside the date with room to its right, so the menu hangs from its start.
+        int alignment = topMenu ? Gravity.START
+                : inputsIconOnly || getResources().getBoolean(R.bool.rtl_menu_bar) ? Gravity.END : Gravity.START;
         dropIn(popup, panel, anchor, alignment);
         rows.getChildAt(0).requestFocus();
     }
