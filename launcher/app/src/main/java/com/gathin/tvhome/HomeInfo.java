@@ -102,6 +102,12 @@ final class HomeInfo {
     private final HomePanel panel;
     private final TelegramNotes telegram;
     private final boolean airOn;
+    /** calendar_ics_urls; the calendars as last read, kept in memory only (they hold the owner's events). */
+    private final java.util.List<String> calendarUrls;
+    private final java.util.List<String> calendars = new java.util.ArrayList<>();
+    private long calendarAt;
+    private static final long CALENDAR_MS = 30 * 60_000L, CALENDAR_SOON_MS = 10 * 60_000L;
+    private final NowPlaying nowPlaying;
     private static final long NOTE_POLL_MS = 45_000L, PANEL_TICK_MS = 60_000L;
     private final Runnable panelTick = new Runnable() {
         @Override
@@ -160,7 +166,15 @@ final class HomeInfo {
                 ? new TelegramNotes(token, owner, activity.getSharedPreferences(TelegramNotes.PREFS, Activity.MODE_PRIVATE))
                 : null;
         airOn = weatherOn && res.getBoolean(R.bool.air_quality);
-        panel = new HomePanel(activity, prefs, notesOn, weatherOn && res.getBoolean(R.bool.hourly_forecast), airOn);
+        java.util.List<String> urls = new java.util.ArrayList<>();
+        for (String u : res.getString(R.string.calendar_ics_urls).trim().split("\\s+")) {
+            if (u.startsWith("https://")) urls.add(u);
+        }
+        calendarUrls = net ? urls : java.util.Collections.emptyList();
+        boolean playingOn = res.getBoolean(R.bool.now_playing);
+        panel = new HomePanel(activity, prefs, notesOn, weatherOn && res.getBoolean(R.bool.hourly_forecast), airOn,
+                !calendarUrls.isEmpty(), playingOn);
+        nowPlaying = playingOn ? new NowPlaying(activity, panel::setTrack) : null;
         // The panel ends where the photo starts: follow the photo's actual bounds whenever it is laid out anew.
         if (memory != null && panel.on()) {
             memory.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
@@ -178,6 +192,24 @@ final class HomeInfo {
         render();   // after the thread: render() schedules its next run only while started
         panel.refresh();
         if (panel.on()) main.postDelayed(panelTick, PANEL_TICK_MS);
+        if (nowPlaying != null) nowPlaying.start();
+        if (!calendarUrls.isEmpty()) {
+            h.post(new Runnable() {
+                @Override
+                public void run() {
+                    if (bg != h) return;
+                    long wait = CALENDAR_MS;
+                    if (System.currentTimeMillis() - calendarAt >= CALENDAR_SOON_MS) {
+                        java.util.List<CalendarFeed.Event> next = readCalendars();
+                        main.post(() -> panel.setEvents(next));
+                        // Something within the hour: look again sooner, so a last-minute change shows.
+                        if (!next.isEmpty() && java.time.Duration.between(java.time.ZonedDateTime.now(),
+                                next.get(0).start).toMinutes() < 60) wait = CALENDAR_SOON_MS;
+                    }
+                    h.postDelayed(this, wait);
+                }
+            });
+        }
         if (telegram != null) {
             h.post(new Runnable() {
                 @Override
@@ -215,6 +247,7 @@ final class HomeInfo {
     void stop() {
         main.removeCallbacks(renderAgain);
         main.removeCallbacks(panelTick);
+        if (nowPlaying != null) nowPlaying.stop();
         if (thread == null) return;
         bg.removeCallbacksAndMessages(null);
         thread.quit();
@@ -488,6 +521,34 @@ final class HomeInfo {
         } finally {
             if (c != null) c.disconnect();
         }
+    }
+
+    /** Background thread: every calendar anew (one that fails keeps its last copy), then the next events. */
+    private java.util.List<CalendarFeed.Event> readCalendars() {
+        while (calendars.size() < calendarUrls.size()) calendars.add("");
+        for (int i = 0; i < calendarUrls.size(); i++) {
+            HttpURLConnection c = null;
+            try {
+                c = (HttpURLConnection) new URL(calendarUrls.get(i)).openConnection();
+                c.setConnectTimeout(TIMEOUT_MS);
+                c.setReadTimeout(TIMEOUT_MS);
+                if (c.getResponseCode() != 200) continue;
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                try (InputStream in = c.getInputStream()) {
+                    byte[] buf = new byte[8192];
+                    int n;
+                    while ((n = in.read(buf)) > 0 && out.size() < 4 * 1024 * 1024) out.write(buf, 0, n);
+                }
+                String ics = out.toString("UTF-8");
+                if (ics.startsWith("BEGIN:VCALENDAR")) calendars.set(i, ics);
+            } catch (Exception ignored) {
+                // Offline or a bad answer: the last copy stays.
+            } finally {
+                if (c != null) c.disconnect();
+            }
+        }
+        calendarAt = System.currentTimeMillis();
+        return CalendarFeed.upcoming(calendars, java.time.ZonedDateTime.now(), 7, 10);
     }
 
     /** Background thread: one request for now and today, kept in prefs. A failure keeps the last reading. */

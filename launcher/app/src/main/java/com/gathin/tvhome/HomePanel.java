@@ -43,14 +43,21 @@ final class HomePanel {
 
     private final Activity activity;
     private final SharedPreferences weather, notes;
-    private final boolean notesOn, hoursOn, airOn;
-    private final View panel, noteCard, aqiBadge, aqiDot, hoursBlock;
+    private final boolean notesOn, hoursOn, airOn, agendaOn, playingOn;
+    private final View panel, noteCard, aqiBadge, aqiDot, hoursBlock, nowPlaying;
+    private final LinearLayout agenda;
+    private final ImageView npArt, npState;
+    private final TextView npTitle, npSub;
+    private NowPlaying.Track track;
+    private java.util.List<CalendarFeed.Event> events = java.util.Collections.emptyList();
+    private static final int AGENDA_MAX = 3, AGENDA_DAYS = 7;
     private final TextView noteText, noteMeta, aqiValue, aqiLabel;
     private final LinearLayout hoursRow;
     private final float density;
     private boolean shown;
 
-    HomePanel(Activity activity, SharedPreferences weather, boolean notesOn, boolean hoursOn, boolean airOn) {
+    HomePanel(Activity activity, SharedPreferences weather, boolean notesOn, boolean hoursOn, boolean airOn,
+              boolean agendaOn, boolean playingOn) {
         this.activity = activity;
         this.weather = weather;
         this.notes = activity.getSharedPreferences(TelegramNotes.PREFS, Activity.MODE_PRIVATE);
@@ -58,6 +65,15 @@ final class HomePanel {
         this.notesOn = notesOn && panel != null;
         this.hoursOn = hoursOn && panel != null;
         this.airOn = airOn && panel != null;
+        this.agendaOn = agendaOn && panel != null;
+        this.playingOn = playingOn && panel != null;
+        agenda = activity.findViewById(R.id.agenda);
+        nowPlaying = activity.findViewById(R.id.nowPlaying);
+        npArt = activity.findViewById(R.id.npArt);
+        npState = activity.findViewById(R.id.npState);
+        npTitle = activity.findViewById(R.id.npTitle);
+        npSub = activity.findViewById(R.id.npSub);
+        if (npArt != null) npArt.setClipToOutline(true);
         noteCard = activity.findViewById(R.id.noteCard);
         noteText = activity.findViewById(R.id.noteText);
         noteMeta = activity.findViewById(R.id.noteMeta);
@@ -72,7 +88,19 @@ final class HomePanel {
     }
 
     boolean on() {
-        return notesOn || hoursOn || airOn;
+        return notesOn || hoursOn || airOn || agendaOn || playingOn;
+    }
+
+    /** NowPlaying: the track changed, or stopped (null). */
+    void setTrack(NowPlaying.Track t) {
+        track = t;
+        if (playingOn) refresh();
+    }
+
+    /** HomeInfo: the calendars were read anew. */
+    void setEvents(java.util.List<CalendarFeed.Event> e) {
+        events = e;
+        if (agendaOn) refresh();
     }
 
     /** Fills the panel from prefs; cheap, called whenever the note, the readings or the hour change. */
@@ -91,6 +119,9 @@ final class HomePanel {
         hoursRow.setVisibility(hours ? View.VISIBLE : View.GONE);
         aqiBadge.setVisibility(air ? View.VISIBLE : View.GONE);
         hoursBlock.setVisibility(hours || air ? View.VISIBLE : View.GONE);
+        if (agendaOn) fillAgenda();
+        if (playingOn) fillPlaying();
+        panel.post(this::fit);
         // The forecast keeps its gap under the note only when there is a note above it.
         ((LinearLayout.LayoutParams) hoursBlock.getLayoutParams()).topMargin =
                 text.isEmpty() ? 0 : Math.round(16 * density);
@@ -110,6 +141,89 @@ final class HomePanel {
         if (day.equals(today.minusDays(1))) return activity.getString(R.string.note_yesterday);
         if (day.isAfter(today.minusDays(7))) return day.format(DateTimeFormatter.ofPattern("EEE", Locale.getDefault()));
         return day.format(DateTimeFormatter.ofPattern("d MMM", Locale.getDefault()));
+    }
+
+    /** The next events, soonest first: "in 20 min", "16:00", "Tomorrow 10:30", "Sat", with the title after. */
+    private void fillAgenda() {
+        agenda.removeAllViews();
+        java.time.ZonedDateTime now = java.time.ZonedDateTime.now();
+        LocalDate today = now.toLocalDate();
+        boolean h24 = DateFormat.is24HourFormat(activity);
+        DateTimeFormatter clock = DateTimeFormatter.ofPattern(h24 ? "HH:mm" : "h:mm a", Locale.getDefault());
+        DateTimeFormatter weekday = DateTimeFormatter.ofPattern("EEE", Locale.getDefault());
+        int shown = 0;
+        for (CalendarFeed.Event e : events) {
+            if (shown == AGENDA_MAX) break;
+            if (!e.allDay && !e.start.plusMinutes(30).isAfter(now) && e.start.isBefore(now.minusMinutes(1))) {
+                // Begun more than a moment ago: still "Now" for half an hour, then it makes way.
+                if (e.start.plusMinutes(30).isBefore(now)) continue;
+            }
+            LocalDate day = e.start.toLocalDate();
+            String when;
+            long mins = java.time.Duration.between(now, e.start).toMinutes();
+            if (e.allDay) {
+                when = day.equals(today) ? activity.getString(R.string.agenda_all_day)
+                        : day.equals(today.plusDays(1)) ? activity.getString(R.string.agenda_tomorrow) : day.format(weekday);
+            } else if (mins <= 0) {
+                when = activity.getString(R.string.agenda_now);
+            } else if (mins < 60) {
+                when = activity.getString(R.string.agenda_in_minutes, mins);
+            } else if (day.equals(today)) {
+                when = e.start.format(clock);
+            } else if (day.equals(today.plusDays(1))) {
+                when = activity.getString(R.string.agenda_tomorrow) + " " + e.start.format(clock);
+            } else {
+                when = day.format(weekday) + " " + e.start.format(clock);
+            }
+            agenda.addView(agendaRow(when, e.title, shown == 0 && mins < 60 && !e.allDay));
+            shown++;
+        }
+        agenda.setVisibility(shown > 0 ? View.VISIBLE : View.GONE);
+    }
+
+    private View agendaRow(String when, String title, boolean soon) {
+        LinearLayout row = new LinearLayout(activity);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        ImageView icon = new ImageView(activity);
+        icon.setImageResource(R.drawable.ic_agenda);
+        icon.setImageTintList(ColorStateList.valueOf(soon ? 0xFFFFD54F : 0x80FFFFFF));
+        int size = Math.round(16 * density);
+        LinearLayout.LayoutParams ip = new LinearLayout.LayoutParams(size, size);
+        ip.setMarginEnd(Math.round(10 * density));
+        row.addView(icon, ip);
+        TextView w = text(15, soon ? 0xFFFFD54F : 0xB3FFFFFF, R.font.outfit_medium);
+        w.setText(when);
+        w.setMinWidth(Math.round(118 * density));
+        row.addView(w);
+        TextView t = text(16, 0xF2FFFFFF, R.font.outfit_regular);
+        t.setText(title);
+        t.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        row.addView(t, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        if (agenda.getChildCount() > 0) rp.topMargin = Math.round(8 * density);
+        row.setLayoutParams(rp);
+        return row;
+    }
+
+    /** The playing track's card: its art (or the app's icon), title, artist and app, play or pause mark. */
+    private void fillPlaying() {
+        NowPlaying.Track t = track;
+        nowPlaying.setVisibility(t == null ? View.GONE : View.VISIBLE);
+        if (t == null) return;
+        if (t.art != null) npArt.setImageBitmap(t.art);
+        else npArt.setImageResource(R.drawable.ic_np_playing);
+        GradientDrawable round = new GradientDrawable();
+        round.setCornerRadius(10 * density);
+        round.setColor(0x33FFFFFF);
+        npArt.setBackground(round);
+        npTitle.setText(t.title);
+        String sub = t.artist.isEmpty() ? t.app : t.app.isEmpty() ? t.artist : t.artist + "  \u00B7  " + t.app;
+        npSub.setText(sub);
+        npSub.setVisibility(sub.isEmpty() ? View.GONE : View.VISIBLE);
+        npState.setImageResource(t.playing ? R.drawable.ic_np_playing : R.drawable.ic_np_paused);
+        npState.setImageTintList(ColorStateList.valueOf(0xB3FFFFFF));
     }
 
     /** The next HOURS hours from the forecast HomeInfo kept: time, icon, temperature. */
@@ -238,6 +352,32 @@ final class HomePanel {
         panel.setLayoutParams(lp);
         int room = dockTop - Math.round(DOCK_GAP_DP * density) - top;
         noteText.setMaxLines(room < Math.round(170 * density) ? 2 : 3);
+        bottomLimit = dockTop - Math.round(DOCK_GAP_DP * density);
+        panel.post(this::fit);
+    }
+
+    private int bottomLimit;
+
+    /**
+     * Whatever would run into the dock gives way, least important first: agenda rows from the last, then the note
+     * drops to one line. Now playing, the forecast and the first agenda row stay.
+     */
+    private void fit() {
+        if (bottomLimit <= 0) return;
+        int[] at = new int[2];
+        for (int guard = 0; guard < 6; guard++) {
+            panel.getLocationInWindow(at);
+            panel.measure(View.MeasureSpec.makeMeasureSpec(panel.getWidth(), View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+            if (at[1] + panel.getMeasuredHeight() <= bottomLimit) return;
+            if (agenda.getChildCount() > 1) {
+                agenda.removeViewAt(agenda.getChildCount() - 1);
+            } else if (noteText.getMaxLines() > 1 && noteCard.getVisibility() == View.VISIBLE) {
+                noteText.setMaxLines(1);
+            } else {
+                return;
+            }
+        }
     }
 
     /** With the shelf: shown while the dock has focus, hidden in the grid. */

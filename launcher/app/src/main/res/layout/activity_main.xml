@@ -258,6 +258,72 @@
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>
+
+        <!-- The next calendar events (calendar_ics_urls), one per line: time, then title. -->
+        <LinearLayout
+            android:id="@+id/agenda"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="vertical"
+            android:visibility="gone" />
+
+        <!-- What is playing on the TV (now_playing): cover, title, artist and app. Only while something plays. -->
+        <LinearLayout
+            android:id="@+id/nowPlaying"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@drawable/note_card"
+            android:padding="10dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/npArt"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:scaleType="centerCrop"
+                android:importantForAccessibility="no" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/npTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:singleLine="true"
+                    android:ellipsize="end"
+                    android:textColor="#F2FFFFFF"
+                    android:textSize="16sp"
+                    android:fontFamily="@font/outfit_medium" />
+
+                <TextView
+                    android:id="@+id/npSub"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:singleLine="true"
+                    android:ellipsize="end"
+                    android:textColor="#A6FFFFFF"
+                    android:textSize="13sp"
+                    android:fontFamily="@font/outfit_regular" />
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/npState"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_marginStart="12dp"
+                android:layout_marginEnd="6dp"
+                android:importantForAccessibility="no" />
+        </LinearLayout>
     </LinearLayout>
 
     <!-- more_apps_hint: under the dock while the rows below it are hidden; Down brings them up. -->

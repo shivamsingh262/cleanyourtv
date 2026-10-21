@@ -58,6 +58,10 @@
     <string name="note_hours">%1$dh</string>
     <string name="note_yesterday">Yesterday</string>
     <string name="aqi_value">AQI %1$d</string>
+    <string name="agenda_all_day">All day</string>
+    <string name="agenda_now">Now</string>
+    <string name="agenda_in_minutes">in %1$d min</string>
+    <string name="agenda_tomorrow">Tomorrow</string>
     <string name="aqi_good">Good</string>
     <string name="aqi_satisfactory">Satisfactory</string>
     <string name="aqi_moderate">Moderate</string>

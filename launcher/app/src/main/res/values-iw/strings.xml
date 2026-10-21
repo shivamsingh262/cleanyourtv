@@ -110,6 +110,10 @@
     <string name="note_hours">%1$d ש׳</string>
     <string name="note_yesterday">אתמול</string>
     <string name="aqi_value">AQI %1$d</string>
+    <string name="agenda_all_day">כל היום</string>
+    <string name="agenda_now">עכשיו</string>
+    <string name="agenda_in_minutes">בעוד %1$d דק׳</string>
+    <string name="agenda_tomorrow">מחר</string>
     <string name="aqi_good">טוב</string>
     <string name="aqi_satisfactory">משביע רצון</string>
     <string name="aqi_moderate">בינוני</string>

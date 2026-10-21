@@ -222,6 +222,15 @@
     <string name="telegram_owner_id" translatable="false"></string>
     <bool name="hourly_forecast">false</bool>
     <bool name="air_quality">false</bool>
+    <!-- The next calendar events left of the photo: one or more calendars' secret iCal addresses (Google Calendar:
+         Settings, the calendar, Integrate calendar, Secret address in iCal format), separated by spaces. Read every
+         30 minutes while Home is on screen, every 10 when an event is within the hour. Empty: no agenda. Needs the
+         network (weather). The addresses give whoever holds them the calendar's events: keep them out of git. -->
+    <string name="calendar_ics_urls" translatable="false"></string>
+    <!-- What is playing on the TV (Spotify, YouTube Music, a cast) as a card left of the photo, only while something
+         plays. Android lets only an enabled notification listener read it, once:
+         adb shell cmd notification allow_listener com.gathin.tvhome/com.gathin.tvhome.NowPlaying\$Listener -->
+    <bool name="now_playing">false</bool>
 
     <!-- Cinematic top shelf: the focused dock app's artwork, softened, fills the top of the screen in its
          colour; the shelf gets a larger name, a "Last opened" line (from the apps Home opened) and dock position
