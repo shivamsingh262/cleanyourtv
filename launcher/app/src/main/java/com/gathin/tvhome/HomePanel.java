@@ -134,9 +134,10 @@ final class HomePanel {
         if (agendaOn) fillAgenda();
         if (playingOn) fillPlaying();
         panel.post(this::fit);
-        // The forecast keeps its gap under the note only when there is a note above it.
+        // The forecast keeps its gap under the note only when there is a note above it (fit() adds the room left).
         ((LinearLayout.LayoutParams) hoursBlock.getLayoutParams()).topMargin =
                 text.isEmpty() ? 0 : Math.round(16 * density);
+        ((LinearLayout.LayoutParams) agenda.getLayoutParams()).topMargin = Math.round(16 * density);
     }
 
     /** How old the note is, as a chat app says it: "now", "5m", "2h" today, then "Yesterday", "Mon", "12 Oct". */
@@ -234,7 +235,9 @@ final class HomePanel {
         TextView t = text(16, 0xF2FFFFFF, R.font.outfit_regular);
         t.setText(title);
         t.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        row.addView(t, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        // The title as long as it is (up to the room left for the weather), the trip's weather right after it.
+        t.setMaxWidth(Math.max(Math.round(160 * density), panel.getLayoutParams().width - Math.round(380 * density)));
+        row.addView(t, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         if (weather != null) {
             // The day's weather where the event goes: its icon, high and low.
             ImageView wi = new ImageView(activity);
@@ -242,7 +245,7 @@ final class HomePanel {
             wi.setImageTintList(ColorStateList.valueOf(0xCCFFFFFF));
             int ws = Math.round(18 * density);
             LinearLayout.LayoutParams wp = new LinearLayout.LayoutParams(ws, ws);
-            wp.setMarginStart(Math.round(12 * density));
+            wp.setMarginStart(Math.round(14 * density));
             wp.setMarginEnd(Math.round(6 * density));
             row.addView(wi, wp);
             TextView wt = text(15, 0xB3FFFFFF, R.font.outfit_regular);
@@ -306,7 +309,7 @@ final class HomePanel {
     private View cell(String time, int icon, long temp) {
         LinearLayout c = new LinearLayout(activity);
         c.setOrientation(LinearLayout.VERTICAL);
-        c.setGravity(Gravity.CENTER_HORIZONTAL);
+        c.setGravity(Gravity.START);   // time over icon and temperature, all on one left edge
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         c.setLayoutParams(lp);
         TextView t = text(12, 0x99FFFFFF, R.font.outfit_medium);
@@ -388,7 +391,7 @@ final class HomePanel {
      * Places the panel under the line below the clock, from LEFT_DP to the photo's left edge (or where the photo
      * would be at its widest), and drops the note to two lines if it would otherwise run into the dock.
      */
-    void layout(View line, int dockTop, int photoLeft) {
+    void layout(View line, int dockTop, int photoLeft, int photoBottom) {
         if (!on() || line == null || dockTop <= 0) return;
         int[] at = new int[2];
         line.getLocationInWindow(at);
@@ -405,8 +408,13 @@ final class HomePanel {
         int room = dockTop - Math.round(DOCK_GAP_DP * density) - top;
         noteText.setMaxLines(room < Math.round(170 * density) ? 2 : 3);
         bottomLimit = dockTop - Math.round(DOCK_GAP_DP * density);
+        minTop = top;
+        alignBottom = photoBottom;
         panel.post(this::fit);
     }
+
+    /** The panel's highest place (under the line below the clock), and the photo's bottom it ends level with. */
+    private int minTop, alignBottom;
 
     private int bottomLimit;
 
@@ -423,7 +431,7 @@ final class HomePanel {
         for (int guard = 0; guard < 8; guard++) {
             panel.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
                     View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
-            if (at[1] + panel.getMeasuredHeight() <= bottomLimit) break;
+            if (minTop + panel.getMeasuredHeight() <= bottomLimit) break;
             if (agenda.getVisibility() == View.VISIBLE && agenda.getChildCount() > 1) {
                 agenda.removeViewAt(agenda.getChildCount() - 1);
                 agendaExtra++;
@@ -438,6 +446,31 @@ final class HomePanel {
             }
         }
         markMore();
+        // Level with the photo: the note stays under the line below the clock, and the room left over goes above the
+        // forecast, so the panel's last line ends where the photo does. With no note the forecast stays at the top
+        // and the room goes above the agenda.
+        View spaced = noteCard.getVisibility() == View.VISIBLE ? hoursBlock
+                : agenda.getVisibility() == View.VISIBLE ? agenda : null;
+        if (spaced != null && spaced.getVisibility() == View.VISIBLE) {
+            LinearLayout.LayoutParams sp = (LinearLayout.LayoutParams) spaced.getLayoutParams();
+            int base = Math.round(16 * density);
+            sp.topMargin = base;
+            spaced.setLayoutParams(sp);
+            if (alignBottom > 0) {
+                panel.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+                        View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+                int extra = Math.min(alignBottom, bottomLimit) - (minTop + panel.getMeasuredHeight());
+                if (extra > 0) {
+                    sp.topMargin = base + extra;
+                    spaced.setLayoutParams(sp);
+                }
+            }
+        }
+        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) panel.getLayoutParams();
+        if (lp.topMargin != minTop) {
+            lp.topMargin = minTop;
+            panel.setLayoutParams(lp);
+        }
     }
 
     /** With the shelf: shown while the dock has focus, hidden in the grid. */

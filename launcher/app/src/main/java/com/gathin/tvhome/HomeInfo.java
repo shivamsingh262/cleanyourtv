@@ -63,7 +63,7 @@ final class HomeInfo {
     /** The print's photo, dp: a landscape photo's width, a portrait one's height. */
     private static final int MEMORY_LANDSCAPE_W_DP = 196, MEMORY_PORTRAIT_H_DP = 150;
     /** With top_menu the top right is free: a larger print near the top, its heading written in the strip. */
-    private static final int OPEN_LANDSCAPE_W_DP = 240, OPEN_PORTRAIT_H_DP = 160, OPEN_TOP_DP = 20;
+    private static final int OPEN_LANDSCAPE_W_DP = 240, OPEN_PORTRAIT_H_DP = 160, OPEN_TOP_DP = 29;
     /**
      * Roomy, once the dock's place is known (setDockTop): the photo is as tall as the room down to the dock allows,
      * at most MAX_W_FRACTION of the screen wide. Anything the frame adds below the photo is CARD_EXTRA_DP (none: the caption sits on it), and the print keeps
@@ -184,7 +184,7 @@ final class HomeInfo {
         // The panel ends where the photo starts: follow the photo's actual bounds whenever it is laid out anew.
         if (memory != null && panel.on()) {
             memory.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
-                if (l != ol || r != or) v.post(this::layoutPanel);
+                if (l != ol || r != or || b != ob) v.post(this::layoutPanel);
             });
         }
     }
@@ -408,7 +408,8 @@ final class HomeInfo {
         if (memoryFound && memory.getWidth() > 0) photoLeft = memory.getLeft();
         else if (!memoryOn || memoryChecked) photoLeft = dm.widthPixels - Math.round(20 * dm.density);   // no photo today
         else photoLeft = Math.round(dm.widthPixels * (1 - MAX_W_FRACTION) - 56 * dm.density);
-        panel.layout(line, dockTop, photoLeft);
+        int photoBottom = memoryFound && memory.getHeight() > 0 ? memory.getBottom() : 0;
+        panel.layout(line, dockTop, photoLeft, photoBottom);
     }
 
     /** The caption's fade spans the photo (a lone match_parent child would keep the last photo's width). */
