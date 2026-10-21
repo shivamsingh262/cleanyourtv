@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
+import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
@@ -62,6 +63,14 @@ final class HomeInfo {
     private static final int MEMORY_LANDSCAPE_W_DP = 196, MEMORY_PORTRAIT_H_DP = 150;
     /** With top_menu the top right is free: a larger print near the top, its heading written in the strip. */
     private static final int OPEN_LANDSCAPE_W_DP = 240, OPEN_PORTRAIT_H_DP = 160, OPEN_TOP_DP = 14;
+    /**
+     * Roomy, once the dock's place is known (setDockTop): the photo is as tall as the room down to the dock allows,
+     * at most MAX_W_FRACTION of the screen wide. The card around it adds CARD_EXTRA_DP in height, and the print keeps
+     * DOCK_GAP_DP clear of the dock and MENU_GAP_DP clear of the open top menu, shrinking towards its top right
+     * corner to do so.
+     */
+    private static final float MAX_W_FRACTION = 0.34f;
+    private static final int CARD_EXTRA_DP = 48, DOCK_GAP_DP = 22, MENU_GAP_DP = 18;
     /** The date tools/photos.sh puts in each name: photo-0007-20231202.jpg, or only the month, -202312. */
     private static final Pattern NAME_DATE = Pattern.compile("-(\\d{4})(\\d{2})(\\d{2})?\\.[A-Za-z]+$");
 
@@ -82,6 +91,9 @@ final class HomeInfo {
     /** Whether the top shelf is showing, so a print that loads later knows whether to appear. */
     private boolean shelfShown;
     private boolean memoryFound;
+    /** Window y where the dock band starts, from MainActivity; 0 until laid out. */
+    private int dockTop;
+    private Bitmap memoryBitmap;
     /** config.xml top_menu: the print has the top right to itself (see OPEN_*). */
     private final boolean roomy;
 
@@ -160,6 +172,58 @@ final class HomeInfo {
         thread.quit();
         thread = null;
         bg = null;
+    }
+
+    /** MainActivity: where the dock band starts, in window px. The print grows into the room above it. */
+    void setDockTop(int y) {
+        if (y == dockTop || y <= 0) return;
+        dockTop = y;
+        layoutMemory();
+    }
+
+    /** Roomy: the photo as large as the room between the top of the screen and the dock allows. */
+    private void layoutMemory() {
+        if (!roomy || memoryBitmap == null || memoryBitmap.isRecycled() || dockTop <= 0) return;
+        android.util.DisplayMetrics dm = activity.getResources().getDisplayMetrics();
+        float d = dm.density;
+        float aspect = (float) memoryBitmap.getWidth() / memoryBitmap.getHeight();
+        float availH = dockTop - (OPEN_TOP_DP + CARD_EXTRA_DP + DOCK_GAP_DP) * d;
+        float h = Math.min(availH, dm.widthPixels * MAX_W_FRACTION / aspect);
+        if (h <= 0) return;
+        ViewGroup.LayoutParams lp = memoryPhoto.getLayoutParams();
+        lp.width = Math.round(h * aspect);
+        lp.height = Math.round(h);
+        memoryPhoto.setLayoutParams(lp);
+    }
+
+    /**
+     * top_menu opening (bar: where its buttons reach, window px) or closing (null): the print shrinks towards its
+     * top right corner just enough to stay clear of the buttons, and grows back when they fold away.
+     */
+    void makeRoomFor(Rect bar, boolean animate) {
+        if (memory == null || !memoryFound) return;
+        float scale = 1f;
+        if (bar != null && memory.getWidth() > 0) {
+            float gap = MENU_GAP_DP * activity.getResources().getDisplayMetrics().density;
+            int[] at = new int[2];
+            memory.getLocationInWindow(at);
+            // Unscaled bounds: getLocationInWindow follows the current scale, the layout does not.
+            float right = at[0] + memory.getWidth() * memory.getScaleX();
+            float left = right - memory.getWidth();
+            if (bar.right + gap > left && bar.top < at[1] + memory.getHeight()) {
+                scale = Math.max(0.3f, (right - bar.right - gap) / memory.getWidth());
+            }
+        }
+        memory.setPivotX(memory.getWidth());
+        memory.setPivotY(0f);
+        memory.animate().cancel();
+        if (animate) {
+            memory.animate().scaleX(scale).scaleY(scale).alpha(shelfShown ? 1f : 0f).setDuration(240)
+                    .setInterpolator(new android.view.animation.DecelerateInterpolator(1.6f)).start();
+        } else {
+            memory.setScaleX(scale);
+            memory.setScaleY(scale);
+        }
     }
 
     /** The shelf shows or hides: the print goes with it. */
@@ -399,12 +463,20 @@ final class HomeInfo {
             h = Math.round(w * (float) size[1] / size[0]);
         }
         // Roomy: the print sits between the top of the screen and the dock, so no photo is taller than a portrait one.
+        // Decoded large enough for the most room it can get; layoutMemory() sizes it once the dock's place is known.
         int maxH = Math.round(OPEN_PORTRAIT_H_DP * density);
         if (roomy && h > maxH) {
             w = Math.round(w * (float) maxH / h);
             h = maxH;
         }
-        Bitmap bitmap = PhotoDream.decode(pick, w, h);
+        int decodeW = w, decodeH = h;
+        if (roomy) {
+            android.util.DisplayMetrics dm = activity.getResources().getDisplayMetrics();
+            float k = Math.min(dm.widthPixels * MAX_W_FRACTION / w, dm.heightPixels * 0.7f / h);
+            decodeW = Math.round(w * k);
+            decodeH = Math.round(h * k);
+        }
+        Bitmap bitmap = PhotoDream.decode(pick, decodeW, decodeH);
         if (bitmap == null) return;
         // Roomy: no line above the print, so the strip says how long ago instead of the month and year.
         String strip = roomy ? ago : date;
@@ -424,10 +496,12 @@ final class HomeInfo {
             return;
         }
         memoryPhoto.setImageBitmap(bitmap);
+        memoryBitmap = bitmap;
         ViewGroup.LayoutParams lp = memoryPhoto.getLayoutParams();
         lp.width = w;
         lp.height = h;
         memoryPhoto.setLayoutParams(lp);
+        layoutMemory();
         memoryKicker.setText(head);
         memoryDate.setText(date);
         memory.setVisibility(View.VISIBLE);

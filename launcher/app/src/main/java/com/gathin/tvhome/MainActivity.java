@@ -559,6 +559,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         btnMenu = findViewById(R.id.btnMenu);
         topMenu = getResources().getBoolean(R.bool.top_menu) && btnMenu != null;
         if (topMenu) setUpTopMenu();
+        moreHint = findViewById(R.id.moreHint);
+        moreAppsHint = moreHint != null && dockRow && cfg.rowsBelowDock == 0
+                && getResources().getBoolean(R.bool.more_apps_hint);
+        if (moreAppsHint) {
+            moreHint.setVisibility(View.VISIBLE);
+            belowDockHidden = true;
+            // Where the dock sits once laid out: the On this day print sizes itself to the room above it.
+            grid.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> grid.post(this::reportDockTop));
+        }
         btnSettings.setOnLongClickListener(v -> {
             showSettingsMenu();
             return true;
@@ -1090,6 +1099,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /** A tile's alpha: dim unless it is the carried one, or, in edit-dock mode, a dock tile other than the chosen place. */
     private float tileAlpha(int pos) {
+        if (belowDockHidden && pos >= COLUMNS) return 0f;
         if (movingKey != null) {
             return pos != RecyclerView.NO_POSITION && movingKey.equals(adapter.keyAt(pos)) ? 1f : 0.45f;
         }
@@ -1310,6 +1320,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     // ---- top shelf -------------------------------------------------------------------------------
 
     private void showHero(int position, float dockTopInRoot) {
+        setBelowDockHidden(true);
         String label = adapter.labelAt(position);
         int color = adapter.ambientColorAt(position);
         float y = dockTopInRoot - 14 * density - 26 * density - hero.getHeight();
@@ -1566,6 +1577,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * name above the dock does not show (every grid tile has its name underneath).
      */
     private void showGlowOnly(int position) {
+        setBelowDockHidden(false);
         int color = adapter.ambientColorAt(position);
         stopAmbientAnimation();
         hero.animate().cancel();
@@ -2150,6 +2162,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private boolean inputsAvailable;
     private boolean networkPillShown;
     private TextView btnMenu;
+    /** config.xml more_apps_hint, and whether the rows below the dock are hidden right now. */
+    private boolean moreAppsHint, belowDockHidden;
+    private View moreHint;
     /** config.xml network_tray: the network pill drops a tray of networks instead of opening Wi-Fi settings. */
     private boolean networkTray;
     /** The top bar's optional buttons as configured (reorder_button, library_button, screensaver_button). */
@@ -2203,12 +2218,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             cp.setMarginStart(i == 0 ? 0 : Math.round(8 * density));
             row.getChildAt(i).setLayoutParams(cp);
         }
-        // The apps start a little lower than under the right-edge bar: the On this day print gets the room above
-        // the dock, and with rows_below_dock the row after the visible one stays off the screen.
-        View gridFrame = (View) grid.getParent();
-        ViewGroup.MarginLayoutParams gp = (ViewGroup.MarginLayoutParams) gridFrame.getLayoutParams();
-        gp.topMargin += Math.round(56 * density);
-        gridFrame.setLayoutParams(gp);
         btnMenu.setVisibility(View.VISIBLE);
         btnMenu.setOnClickListener(v -> setBarOpen(!barOpen, true));
         setBarOpen(false, false);
@@ -2225,6 +2234,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         findViewById(R.id.btnSettings).setVisibility(open ? View.VISIBLE : View.GONE);
         btnMenu.setCompoundDrawablesRelativeWithIntrinsicBounds(
                 open ? R.drawable.ic_menu_close : R.drawable.ic_menu_more, 0, 0, 0);
+        View bar = findViewById(R.id.topButtons);
+        if (!open) homeInfo.makeRoomFor(null, animations);
+        else bar.post(() -> {
+            int[] at = new int[2];
+            bar.getLocationInWindow(at);
+            homeInfo.makeRoomFor(new Rect(at[0], at[1], at[0] + bar.getWidth(), at[1] + bar.getHeight()), animations);
+        });
         if (!moveFocus) return;
         if (!open) btnMenu.requestFocus();
         else if (btnInputs.getVisibility() == View.VISIBLE) btnInputs.requestFocus();
@@ -2242,6 +2258,34 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             i.putExtra(QuickSettingsActivity.EXTRA_TOP, at[1] + bar.getHeight() + Math.round(10 * density));
         }
         return i;
+    }
+
+    /** more_apps_hint: hides or brings back the rows below the dock, and shows the hint while they are hidden. */
+    private void setBelowDockHidden(boolean hidden) {
+        if (!moreAppsHint) return;
+        boolean changed = hidden != belowDockHidden;
+        belowDockHidden = hidden;
+        for (int i = 0; changed && i < grid.getChildCount(); i++) {
+            View child = grid.getChildAt(i);
+            int pos = grid.getChildAdapterPosition(child);
+            if (pos < COLUMNS) continue;
+            child.animate().cancel();
+            if (animations) child.animate().alpha(tileAlpha(pos)).setDuration(hidden ? 140 : 220).start();
+            else child.setAlpha(tileAlpha(pos));
+        }
+        boolean more = adapter != null && adapter.getItemCount() > COLUMNS;
+        float hint = hidden && more ? 1f : 0f;
+        if (moreHint.getAlpha() == hint) return;
+        moreHint.animate().cancel();
+        if (animations) moreHint.animate().alpha(hint).setDuration(hidden ? 260 : 120).start();
+        else moreHint.setAlpha(hint);
+    }
+
+    /** Where the dock band starts when parked, in window px, for the On this day print to size itself above. */
+    private void reportDockTop() {
+        int[] at = new int[2];
+        grid.getLocationInWindow(at);
+        homeInfo.setDockTop(at[1] + grid.getPaddingTop() - Math.round(20 * density));
     }
 
     private void makeIconOnly(TextView pill) {

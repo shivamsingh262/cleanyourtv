@@ -146,6 +146,27 @@
             android:visibility="gone" />
     </LinearLayout>
 
+    <!-- more_apps_hint: under the dock while the rows below it are hidden; Down brings them up. -->
+    <TextView
+        android:id="@+id/moreHint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="10dp"
+        android:gravity="center"
+        android:text="@string/more_apps"
+        android:textColor="#99FFFFFF"
+        android:textSize="13sp"
+        android:fontFamily="@font/outfit_medium"
+        android:letterSpacing="0.12"
+        android:textAllCaps="true"
+        android:drawableBottom="@drawable/ic_more_down"
+        android:drawableTint="#99FFFFFF"
+        android:drawablePadding="0dp"
+        android:alpha="0"
+        android:visibility="gone"
+        android:focusable="false" />
+
     <!-- On this day (config.xml on_this_day, HomeInfo): one of the screensaver photos taken around today's date
          in an earlier year, as a tilted print on the right of the top shelf. Shown and hidden with the shelf. -->
     <LinearLayout
@@ -458,6 +479,8 @@
                 android:clipChildren="false"
                 android:overScrollMode="never"
                 android:scrollbars="none"
+                android:requiresFadingEdge="vertical"
+                android:fadingEdgeLength="56dp"
                 android:descendantFocusability="afterDescendants" />
         </FrameLayout>
     </LinearLayout>

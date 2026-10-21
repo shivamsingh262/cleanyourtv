@@ -51,6 +51,7 @@
     <string name="quick_apps_hint">Re-enable</string>
     <string name="quick_screensaver">Screensaver</string>
     <string name="top_menu">Menu</string>
+    <string name="more_apps">More apps</string>
     <!-- network_tray: the Wi-Fi tray under the network pill. -->
     <string name="wifi_all_settings">All Wi-Fi settings</string>
     <string name="wifi_off">Off</string>
