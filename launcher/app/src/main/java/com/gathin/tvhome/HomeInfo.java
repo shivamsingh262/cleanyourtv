@@ -21,6 +21,7 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
@@ -108,6 +109,7 @@ final class HomeInfo {
     private long calendarAt;
     private static final long CALENDAR_MS = 30 * 60_000L, CALENDAR_SOON_MS = 10 * 60_000L;
     private final NowPlaying nowPlaying;
+    private final int reminderMinutes;
     private static final long NOTE_POLL_MS = 45_000L, PANEL_TICK_MS = 60_000L;
     private final Runnable panelTick = new Runnable() {
         @Override
@@ -163,7 +165,8 @@ final class HomeInfo {
             // No owner: no sender is trusted, so no note is read.
         }
         telegram = notesOn && !token.isEmpty() && owner > 0
-                ? new TelegramNotes(token, owner, activity.getSharedPreferences(TelegramNotes.PREFS, Activity.MODE_PRIVATE))
+                ? new TelegramNotes(token, owner, activity.getSharedPreferences(TelegramNotes.PREFS, Activity.MODE_PRIVATE),
+                        new java.io.File(activity.getExternalFilesDir(null), PhotoDream.DIR))
                 : null;
         airOn = weatherOn && res.getBoolean(R.bool.air_quality);
         java.util.List<String> urls = new java.util.ArrayList<>();
@@ -175,6 +178,7 @@ final class HomeInfo {
         panel = new HomePanel(activity, prefs, notesOn, weatherOn && res.getBoolean(R.bool.hourly_forecast), airOn,
                 !calendarUrls.isEmpty() || telegram != null, playingOn);
         nowPlaying = playingOn ? new NowPlaying(activity, panel::setTrack) : null;
+        reminderMinutes = Math.max(0, Math.min(120, res.getInteger(R.integer.reminder_minutes)));
         // The panel ends where the photo starts: follow the photo's actual bounds whenever it is laid out anew.
         if (memory != null && panel.on()) {
             memory.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
@@ -193,7 +197,7 @@ final class HomeInfo {
         panel.refresh();
         if (panel.on()) main.postDelayed(panelTick, PANEL_TICK_MS);
         if (nowPlaying != null) nowPlaying.start();
-        if (telegram != null) panel.setEvents(agenda());   // the Telegram events at once, before any calendar read
+        if (telegram != null) showAgenda(h);   // the Telegram events at once, before any calendar read
         if (!calendarUrls.isEmpty()) {
             h.post(new Runnable() {
                 @Override
@@ -202,7 +206,7 @@ final class HomeInfo {
                     long wait = CALENDAR_MS;
                     if (System.currentTimeMillis() - calendarAt >= CALENDAR_SOON_MS) {
                         java.util.List<CalendarFeed.Event> next = readCalendars();
-                        main.post(() -> panel.setEvents(agenda()));
+                        main.post(() -> showAgenda(h));
                         // Something within the hour: look again sooner, so a last-minute change shows.
                         if (!next.isEmpty() && java.time.Duration.between(java.time.ZonedDateTime.now(),
                                 next.get(0).start).toMinutes() < 60) wait = CALENDAR_SOON_MS;
@@ -216,7 +220,7 @@ final class HomeInfo {
                 @Override
                 public void run() {
                     if (bg != h) return;
-                    if (telegram.poll()) main.post(() -> panel.setEvents(agenda()));
+                    if (telegram.poll()) main.post(() -> showAgenda(h));
                     h.postDelayed(this, NOTE_POLL_MS);
                 }
             });
@@ -556,7 +560,95 @@ final class HomeInfo {
     /** The Google Calendar events last read and the ones set from Telegram, soonest first. */
     private volatile java.util.List<CalendarFeed.Event> calendarEvents = java.util.Collections.emptyList();
 
+    /** Main thread: the agenda to the panel, then on bg the weather where its trips go. */
+    private void showAgenda(Handler h) {
+        java.util.List<CalendarFeed.Event> list = agenda();
+        panel.setEvents(list);
+        if (weatherOn && bg == h) h.post(() -> {
+            java.util.Map<String, int[]> found = destinations(list);
+            if (!found.isEmpty()) main.post(() -> panel.setDestinations(found));
+        });
+    }
+
+    /** "Travel to Dehradun", "Trip to Goa", "Lunch @Mussoorie": the place an event names, or null. */
+    static String place(String title) {
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("@\\s*([\\p{L}][\\p{L} .'-]{1,40})").matcher(title);
+        if (m.find()) return m.group(1).trim();
+        m = java.util.regex.Pattern.compile("\\bto\\s+(\\p{Lu}[\\p{L}.'-]+(?:\\s+\\p{Lu}[\\p{L}.'-]+){0,2})").matcher(title);
+        return m.find() ? m.group(1).trim() : null;
+    }
+
+    /**
+     * Background thread: the day's weather where the next events go, keyed by HomePanel.eventKey: {code, max, min}.
+     * Places are looked up once (Open-Meteo geocoding) and forecasts kept for three hours.
+     */
+    private java.util.Map<String, int[]> destinations(java.util.List<CalendarFeed.Event> events) {
+        java.util.Map<String, int[]> out = new java.util.HashMap<>();
+        int looked = 0;
+        for (CalendarFeed.Event e : events) {
+            if (looked == 3) break;
+            String place = place(e.title);
+            if (place == null) continue;
+            looked++;
+            try {
+                String geo = prefs.getString("geo:" + place.toLowerCase(Locale.ROOT), null);
+                if (geo == null) {
+                    JSONObject r = new JSONObject(get("https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&name="
+                            + java.net.URLEncoder.encode(place, "UTF-8")));
+                    JSONArray results = r.optJSONArray("results");
+                    if (results == null || results.length() == 0) continue;
+                    JSONObject g = results.getJSONObject(0);
+                    geo = String.format(Locale.ROOT, "%.3f,%.3f", g.getDouble("latitude"), g.getDouble("longitude"));
+                    prefs.edit().putString("geo:" + place.toLowerCase(Locale.ROOT), geo).apply();
+                }
+                String day = e.start.toLocalDate().toString();
+                String key = "dw:" + geo + ":" + day;
+                String cached = prefs.getString(key, null);
+                long at = prefs.getLong(key + ":at", 0);
+                if (cached == null || System.currentTimeMillis() - at > 3 * 60 * 60_000L) {
+                    String[] ll = geo.split(",");
+                    JSONObject d = new JSONObject(get("https://api.open-meteo.com/v1/forecast?latitude=" + ll[0]
+                            + "&longitude=" + ll[1] + "&daily=weather_code,temperature_2m_max,temperature_2m_min"
+                            + "&timezone=auto&start_date=" + day + "&end_date=" + day)).getJSONObject("daily");
+                    cached = d.getJSONArray("weather_code").getInt(0) + "," + Math.round(d.getJSONArray("temperature_2m_max")
+                            .getDouble(0)) + "," + Math.round(d.getJSONArray("temperature_2m_min").getDouble(0));
+                    prefs.edit().putString(key, cached).putLong(key + ":at", System.currentTimeMillis()).apply();
+                }
+                String[] v = cached.split(",");
+                out.put(HomePanel.eventKey(e), new int[]{Integer.parseInt(v[0]), Integer.parseInt(v[1]), Integer.parseInt(v[2])});
+            } catch (Exception ignored) {
+                // Unknown place, offline, or a day past the forecast: no weather on that line.
+            }
+        }
+        return out;
+    }
+
+    /** Background thread: a small GET as text, or an exception. */
+    private static String get(String address) throws Exception {
+        HttpURLConnection c = (HttpURLConnection) new URL(address).openConnection();
+        try {
+            c.setConnectTimeout(TIMEOUT_MS);
+            c.setReadTimeout(TIMEOUT_MS);
+            if (c.getResponseCode() != 200) throw new java.io.IOException("HTTP " + c.getResponseCode());
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            try (InputStream in = c.getInputStream()) {
+                byte[] buf = new byte[4096];
+                int n;
+                while ((n = in.read(buf)) > 0 && out.size() < 64 * 1024) out.write(buf, 0, n);
+            }
+            return out.toString("UTF-8");
+        } finally {
+            c.disconnect();
+        }
+    }
+
     private java.util.List<CalendarFeed.Event> agenda() {
+        java.util.List<CalendarFeed.Event> all = merged();
+        if (reminderMinutes > 0) Reminders.schedule(activity, all, reminderMinutes);
+        return all;
+    }
+
+    private java.util.List<CalendarFeed.Event> merged() {
         java.util.List<CalendarFeed.Event> all = new java.util.ArrayList<>(calendarEvents);
         if (telegram != null) {
             java.time.ZonedDateTime now = java.time.ZonedDateTime.now();

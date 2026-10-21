@@ -62,6 +62,8 @@
     <string name="agenda_now">Now</string>
     <string name="agenda_in_minutes">in %1$d min</string>
     <string name="agenda_tomorrow">Tomorrow</string>
+    <!-- Reminders' banner over any app: minutes to go, then the clock time. -->
+    <string name="reminder_when">In %1$d min · %2$s</string>
     <string name="aqi_good">Good</string>
     <string name="aqi_satisfactory">Satisfactory</string>
     <string name="aqi_moderate">Moderate</string>

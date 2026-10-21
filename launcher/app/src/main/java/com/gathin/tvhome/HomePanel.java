@@ -97,6 +97,18 @@ final class HomePanel {
         if (playingOn) refresh();
     }
 
+    private java.util.Map<String, int[]> destinations = java.util.Collections.emptyMap();
+
+    static String eventKey(CalendarFeed.Event e) {
+        return e.title + "|" + e.start.toInstant().toEpochMilli();
+    }
+
+    /** HomeInfo: the weather where the agenda's trips go, by eventKey: {code, max, min}. */
+    void setDestinations(java.util.Map<String, int[]> d) {
+        destinations = d;
+        if (agendaOn) refresh();
+    }
+
     /** HomeInfo: the calendars were read anew. */
     void setEvents(java.util.List<CalendarFeed.Event> e) {
         events = e;
@@ -175,13 +187,14 @@ final class HomePanel {
             } else {
                 when = day.format(weekday) + " " + e.start.format(clock);
             }
-            agenda.addView(agendaRow(when, e.title, shown == 0 && mins < 60 && !e.allDay));
+            agenda.addView(agendaRow(when, e.title, shown == 0 && mins < 60 && !e.allDay,
+                    destinations.get(eventKey(e))));
             shown++;
         }
         agenda.setVisibility(shown > 0 ? View.VISIBLE : View.GONE);
     }
 
-    private View agendaRow(String when, String title, boolean soon) {
+    private View agendaRow(String when, String title, boolean soon, int[] weather) {
         LinearLayout row = new LinearLayout(activity);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
@@ -200,6 +213,21 @@ final class HomePanel {
         t.setText(title);
         t.setEllipsize(android.text.TextUtils.TruncateAt.END);
         row.addView(t, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        if (weather != null) {
+            // The day's weather where the event goes: its icon, high and low.
+            ImageView wi = new ImageView(activity);
+            wi.setImageResource(HomeInfo.conditionIcon(weather[0], true));
+            wi.setImageTintList(ColorStateList.valueOf(0xCCFFFFFF));
+            int ws = Math.round(18 * density);
+            LinearLayout.LayoutParams wp = new LinearLayout.LayoutParams(ws, ws);
+            wp.setMarginStart(Math.round(12 * density));
+            wp.setMarginEnd(Math.round(6 * density));
+            row.addView(wi, wp);
+            TextView wt = text(15, 0xB3FFFFFF, R.font.outfit_regular);
+            wt.setText(activity.getString(R.string.degrees, weather[1]) + " / "
+                    + activity.getString(R.string.degrees, weather[2]));
+            row.addView(wt);
+        }
         LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT);
         if (agenda.getChildCount() > 0) rp.topMargin = Math.round(8 * density);

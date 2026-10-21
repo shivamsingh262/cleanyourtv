@@ -8,6 +8,8 @@
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- reminder_minutes: the banner over other apps (Reminders); granted with appops, never asked for. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <!-- Needed since Android 10 to read the Wi-Fi network name for the network pill. Never requested at
          runtime: build-and-install grants it with pm grant, so lint's Android 12 "ask for COARSE with
@@ -134,6 +136,11 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </service>
+
+        <!-- reminder_minutes: the alarm that shows a reminder banner (Reminders). -->
+        <receiver
+            android:name=".Reminders$Receiver"
+            android:exported="false" />
 
         <!-- now_playing: the key Android asks for before it lets the launcher read the media sessions (NowPlaying). -->
         <service

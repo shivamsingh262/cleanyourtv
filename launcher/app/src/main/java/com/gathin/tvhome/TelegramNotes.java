@@ -30,10 +30,14 @@ final class TelegramNotes {
     private final long owner;
     private final SharedPreferences store;
 
-    TelegramNotes(String token, long owner, SharedPreferences store) {
+    private final TelegramPhotos photos;
+
+    /** photoDir: the Photos screensaver's folder, which photos sent to the bot join; null leaves photos out. */
+    TelegramNotes(String token, long owner, SharedPreferences store, java.io.File photoDir) {
         this.token = token;
         this.owner = owner;
         this.store = store;
+        this.photos = photoDir != null ? new TelegramPhotos(token, photoDir) : null;
     }
 
     static final String KEY_EVENTS = "events";
@@ -80,7 +84,9 @@ final class TelegramNotes {
             + "/clear removes it.\n\n"
             + "/event 18:00 Dentist\n/event tomorrow 10:30 Standup\n/event fri 6pm Dinner\n"
             + "/event 25 oct 9am Flight\n/event sat Diwali shopping (all day)\n"
-            + "/events lists them, /cancel 2 removes the second.";
+            + "/events lists them, /cancel 2 removes the second.\n\n"
+            + "Send photos to add them to the screensaver (caption a date like \"Dec 2023\" for On this day).\n"
+            + "/photos shows them numbered, /remove 12 15 takes them out, /removed and /restore 12 bring them back.";
 
     /** Background thread: reads what came in since last time; true when the note or the events changed. */
     boolean poll() {
@@ -103,8 +109,13 @@ final class TelegramNotes {
                 if (m == null || m.optJSONObject("from") == null) continue;
                 if (m.getJSONObject("from").optLong("id") != owner) continue;
                 String text = m.optString("text", "").trim();
-                if (text.isEmpty()) continue;
                 long from = m.getJSONObject("chat").optLong("id");
+                if (photos != null && (m.has("photo") || m.has("document"))) {
+                    String r = photos.add(m);
+                    if (r != null) replies.add(new String[]{"" + from, r});
+                    continue;
+                }
+                if (text.isEmpty()) continue;
                 String lower = text.toLowerCase(java.util.Locale.ROOT);
                 if (text.equals("/clear")) {
                     note = "";
@@ -140,6 +151,14 @@ final class TelegramNotes {
                     } else {
                         replies.add(new String[]{"" + from, "Send /events, then /cancel with its number."});
                     }
+                } else if (photos != null && (lower.equals("/photos") || lower.startsWith("/photos "))) {
+                    photos.list(from, text.substring(7));
+                } else if (photos != null && lower.startsWith("/remove") && !lower.startsWith("/removed")) {
+                    replies.add(new String[]{"" + from, photos.remove(text.substring(7))});
+                } else if (photos != null && lower.equals("/removed")) {
+                    photos.removed(from);
+                } else if (photos != null && lower.startsWith("/restore")) {
+                    replies.add(new String[]{"" + from, photos.restore(text.substring(8))});
                 } else if (text.startsWith("/")) {
                     replies.add(new String[]{"" + from, HELP});   // /start, /help and anything else
                 } else {
