@@ -32,7 +32,7 @@ import java.util.Locale;
 final class HomePanel {
 
     private static final int HOURS = 6;
-    private static final int LEFT_DP = 60, LINE_GAP_DP = 20, PHOTO_GAP_DP = 36, DOCK_GAP_DP = 20;
+    private static final int LEFT_DP = 48, LINE_GAP_DP = 20, PHOTO_GAP_DP = 36, DOCK_GAP_DP = 20;
     /** CPCB's PM2.5 and PM10 breakpoints (24-hour average, ug/m3) against the index band each one opens. */
     private static final double[] PM25 = {0, 30, 60, 90, 120, 250, 380};
     private static final double[] PM10 = {0, 50, 100, 250, 350, 430, 510};
@@ -400,6 +400,8 @@ final class HomePanel {
         lp.leftMargin = left;
         lp.width = Math.max(Math.round(240 * density), right - left);
         panel.setLayoutParams(lp);
+        // The note card fits its note, up to the panel's width (less its padding and the age at the end).
+        noteText.setMaxWidth(lp.width - Math.round((20 + 20 + 16 + 56) * density));
         int room = dockTop - Math.round(DOCK_GAP_DP * density) - top;
         noteText.setMaxLines(room < Math.round(170 * density) ? 2 : 3);
         bottomLimit = dockTop - Math.round(DOCK_GAP_DP * density);

@@ -26,6 +26,8 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
     private final float namesRoom;
     /** Light glass like the top bar's pills (config.xml dock_glass): a white tint that fades downwards. */
     private final boolean lightGlass;
+    /** The band spans the grid's whole width, so its ends line up with the text and photo margins (dock_glass). */
+    private final boolean fullWidth;
     /** The band's top and bottom the glass gradient was made for; it is remade when they move. */
     private float shaderTop = Float.NaN, shaderBottom = Float.NaN;
     /** The band's own alphas, which the scroll fade below scales. */
@@ -41,6 +43,7 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
         this.density = density;
         this.namesRoom = names ? 22 * density : 0;
         this.lightGlass = lightGlass;
+        this.fullWidth = lightGlass;
         band.setColor(translucent ? 0x8C121014 : 0xFF141416);
         edge.setStyle(Paint.Style.STROKE);
         edge.setStrokeWidth(density);
@@ -89,7 +92,8 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
         // 1dp edge line, inside the grid; the top and bottom have room.
         // A focused end tile grows by FOCUS_SCALE about its centre: leave that growth plus the usual gap at the sides,
         // where the columns have room (smaller tiles, tile_size_percent), so it never meets the band's edge.
-        float wanted = Math.max(pad, firstCardW * (AppAdapter.FOCUS_SCALE - 1f) / 2f + 12 * density);
+        float wanted = fullWidth ? Float.MAX_VALUE
+                : Math.max(pad, firstCardW * (AppAdapter.FOCUS_SCALE - 1f) / 2f + 12 * density);
         float side = Math.max(0f, Math.min(wanted, Math.min(rect.left, parent.getWidth() - rect.right) - density));
         rect.inset(-side, -pad);
         rect.bottom += namesRoom;

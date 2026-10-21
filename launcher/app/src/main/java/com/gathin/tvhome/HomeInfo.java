@@ -63,14 +63,14 @@ final class HomeInfo {
     /** The print's photo, dp: a landscape photo's width, a portrait one's height. */
     private static final int MEMORY_LANDSCAPE_W_DP = 196, MEMORY_PORTRAIT_H_DP = 150;
     /** With top_menu the top right is free: a larger print near the top, its heading written in the strip. */
-    private static final int OPEN_LANDSCAPE_W_DP = 240, OPEN_PORTRAIT_H_DP = 160, OPEN_TOP_DP = 6;
+    private static final int OPEN_LANDSCAPE_W_DP = 240, OPEN_PORTRAIT_H_DP = 160, OPEN_TOP_DP = 20;
     /**
      * Roomy, once the dock's place is known (setDockTop): the photo is as tall as the room down to the dock allows,
      * at most MAX_W_FRACTION of the screen wide. Anything the frame adds below the photo is CARD_EXTRA_DP (none: the caption sits on it), and the print keeps
      * DOCK_GAP_DP clear of the dock and MENU_GAP_DP clear of the open top menu, shrinking towards its top right
      * corner to do so.
      */
-    private static final float MAX_W_FRACTION = 0.34f;
+    private static final float MAX_W_FRACTION = 0.40f;
     private static final int CARD_EXTRA_DP = 0, DOCK_GAP_DP = 30, MENU_GAP_DP = 18;
     /** The date tools/photos.sh puts in each name: photo-0007-20231202.jpg, or only the month, -202312. */
     private static final Pattern NAME_DATE = Pattern.compile("-(\\d{4})(\\d{2})(\\d{2})?\\.[A-Za-z]+$");

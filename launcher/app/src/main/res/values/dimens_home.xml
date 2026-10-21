@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Home's margin at the left and right screen edges: the text column, the photo and the dock band all keep to
+         it. 48dp is Android TV's overscan-safe margin. -->
+    <dimen name="home_side">48dp</dimen>
+</resources>

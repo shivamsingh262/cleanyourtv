@@ -135,7 +135,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     /** DockDecoration's offsets above and below the dock row. */
     static final float DOCK_EXTRA_DP = 6 + 12;
     /** Room kept under the last row rows_below_dock asks for (MainActivity places the dock with the same). */
-    static final float BOTTOM_ROOM_DP = 30;
+    static final float BOTTOM_ROOM_DP = 14;
     /** Room kept above the dock for the dock title (48sp hero name plus its 40dp gap) when dock_title is on. */
     static final float TITLE_ROOM_DP = 104;
     /** dock_row false: room above the first row for its zoom and glass (MainActivity places the grid with it). */
