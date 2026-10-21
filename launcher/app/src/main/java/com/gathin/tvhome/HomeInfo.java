@@ -91,6 +91,8 @@ final class HomeInfo {
     /** Whether the top shelf is showing, so a print that loads later knows whether to appear. */
     private boolean shelfShown;
     private boolean memoryFound;
+    /** Today's pick is done, found or not: without a photo the panel takes the width. */
+    private boolean memoryChecked;
     /** Window y where the dock band starts, from MainActivity; 0 until laid out. */
     private int dockTop;
     private Bitmap memoryBitmap;
@@ -159,6 +161,12 @@ final class HomeInfo {
                 : null;
         airOn = weatherOn && res.getBoolean(R.bool.air_quality);
         panel = new HomePanel(activity, prefs, notesOn, weatherOn && res.getBoolean(R.bool.hourly_forecast), airOn);
+        // The panel ends where the photo starts: follow the photo's actual bounds whenever it is laid out anew.
+        if (memory != null && panel.on()) {
+            memory.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
+                if (l != ol || r != or) v.post(this::layoutPanel);
+            });
+        }
     }
 
     void start() {
@@ -226,8 +234,10 @@ final class HomeInfo {
     private void layoutPanel() {
         if (!panel.on() || dockTop <= 0) return;
         android.util.DisplayMetrics dm = activity.getResources().getDisplayMetrics();
-        int photoLeft = memoryFound && memory.getWidth() > 0 ? memory.getLeft()
-                : Math.round(dm.widthPixels * (1 - MAX_W_FRACTION) - 56 * dm.density);
+        int photoLeft;
+        if (memoryFound && memory.getWidth() > 0) photoLeft = memory.getLeft();
+        else if (!memoryOn || memoryChecked) photoLeft = dm.widthPixels - Math.round(20 * dm.density);   // no photo today
+        else photoLeft = Math.round(dm.widthPixels * (1 - MAX_W_FRACTION) - 56 * dm.density);
         panel.layout(line, dockTop, photoLeft);
     }
 
@@ -253,7 +263,6 @@ final class HomeInfo {
         lp.height = Math.round(h);
         memoryPhoto.setLayoutParams(lp);
         fitCaption(lp.width);
-        memory.post(this::layoutPanel);   // once the photo has its new width
     }
 
     /**
@@ -595,8 +604,10 @@ final class HomeInfo {
             ((BitmapDrawable) old).getBitmap().recycle();
         }
         memoryFound = bitmap != null;
+        memoryChecked = true;
         if (bitmap == null) {
             memory.setVisibility(View.GONE);
+            layoutPanel();
             return;
         }
         memoryPhoto.setImageBitmap(bitmap);
