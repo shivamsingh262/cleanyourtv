@@ -539,6 +539,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (cfg.wifiLabelWidth > 0) btnWifi.setMaxWidth(Math.round(cfg.wifiLabelWidth * density));
             else makeIconOnly(btnWifi);
             makeIconOnly((TextView) btnSettings);
+            inputsIconOnly = getResources().getBoolean(R.bool.inputs_icon_only);
+            if (inputsIconOnly) makeIconOnly((TextView) btnInputs);
         }
         btnSettings.setOnLongClickListener(v -> {
             showSettingsMenu();
@@ -2105,6 +2107,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private boolean iconOnlyButtons;
     /** icon_only_buttons without wifi_label_width: the Wi-Fi pill shows no network name. */
     private boolean wifiIconOnly;
+    /** config.xml inputs_icon_only (with icon_only_buttons): Inputs is a round icon, its menu hangs from the bar's end. */
+    private boolean inputsIconOnly;
     /** The app library button in the top bar (library_button). */
     private View btnLibraryTop;
     /** The open library came from that button: closing it returns there instead of scrolling to the grid's end. */
@@ -2272,7 +2276,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             openSourcePanel();
             return;
         }
-        View anchor = findViewById(R.id.btnInputs);
+        // A round Inputs icon is too narrow to hang a menu from: it hangs from the end of the button bar instead,
+        // lined up with the Settings icon, rather than running off the right edge of the screen.
+        View anchor = findViewById(inputsIconOnly ? R.id.topButtons : R.id.btnInputs);
         View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
         LinearLayout rows = panel.findViewById(R.id.rows);
 
@@ -2407,7 +2413,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
         popup.setWidth(Math.max(width, Math.min(panel.getMeasuredWidth(), (int) (360 * density))));
 
-        int alignment = getResources().getBoolean(R.bool.rtl_menu_bar) ? Gravity.END : Gravity.START;
+        int alignment = inputsIconOnly || getResources().getBoolean(R.bool.rtl_menu_bar) ? Gravity.END : Gravity.START;
         dropIn(popup, panel, anchor, alignment);
         rows.getChildAt(0).requestFocus();
     }

@@ -120,6 +120,9 @@
     <!-- Wi-Fi and Settings as round icon-only buttons (the network name moves to the talkback description);
          Inputs keeps its label. -->
     <bool name="icon_only_buttons">false</bool>
+    <!-- With icon_only_buttons: Inputs as a round icon button too, so the top bar is three icons on the right.
+         Its name moves to the talkback description like the others'. -->
+    <bool name="inputs_icon_only">false</bool>
     <!-- The app library as a round button in the top bar, beside Settings (app_library must be on too). -->
     <bool name="library_button">false</bool>
     <!-- With icon_only_buttons: keep the network name on the Wi-Fi pill up to this width in dp, cut with an ellipsis.
