@@ -52,7 +52,7 @@ public class PhotoDream extends DreamService {
     private static final int CARD_SIDES_DP = 20, CARD_TOPBOTTOM_DP = 48;
     /** Space kept free at the screen's edges and around the clock. */
     /** The gap at the screen's left and right edges and at its top; between two prints; above the clock line. */
-    private static final int SIDE_DP = 48, TOP_DP = 28, COLUMN_GAP_DP = 24, STRIP_GAP_DP = 20;
+    private static final int SIDE_DP = 48, TOP_DP = 20, COLUMN_GAP_DP = 24, STRIP_GAP_DP = 4;
 
     /** Random play around REST, so no two sets lie the same way. */
     private static final int JITTER_DP = 14, JITTER_DEG = 2;
@@ -60,6 +60,8 @@ public class PhotoDream extends DreamService {
     private static final int MAX_TILT_DEG = 7;
     /** How far the clock may wander, so it does not burn in. */
     private static final int NUDGE_DP = 20;
+    /** Up and down the clock line and the prints move much less than sideways: the room above the line is photos'. */
+    private static final int NUDGE_UP_DP = 6, JITTER_Y_DP = 6;
     /**
      * The date the owner's file names carry (tools/photos.sh adds it): photo-0007-20231202.jpg, or from an older
      * upload only the month, photo-0007-202312.jpg. The print shows the month and year.
@@ -244,7 +246,7 @@ public class PhotoDream extends DreamService {
     private int stripTop() {
         int screenH = getResources().getDisplayMetrics().heightPixels;
         if (clock.getHeight() == 0) return screenH - Math.round(120 * density);
-        return clock.getTop() - Math.round(NUDGE_DP * density);
+        return clock.getTop() - Math.round(NUDGE_UP_DP * density);
     }
 
     /** Slides the prints on screen off to the left, one after another, then deals the new ones in from the right. */
@@ -277,7 +279,8 @@ public class PhotoDream extends DreamService {
         float areaTop = top, areaBottom = stripTop() - STRIP_GAP_DP * density;
         float colW = (screenW - 2 * side - (PRINTS - 1) * colGap) / PRINTS;
         // The box a tilted card must fit, leaving room for the play either way.
-        float boxW = colW - 2 * jitter, boxH = areaBottom - areaTop - 2 * jitter;
+        float jitterY = JITTER_Y_DP * density;
+        float boxW = colW - 2 * jitter, boxH = areaBottom - areaTop - 2 * jitterY;
         float sides = CARD_SIDES_DP * density, strips = CARD_TOPBOTTOM_DP * density;
         double rad = Math.toRadians(MAX_TILT_DEG);
         float cos = (float) Math.cos(rad), sin = (float) Math.sin(rad);
@@ -299,7 +302,7 @@ public class PhotoDream extends DreamService {
             p.w = Math.max(1, Math.round(h * a));
             int cw = p.w + Math.round(sides), ch = p.h + Math.round(strips);
             float cx = side + colW / 2f + i * (colW + colGap) + (random.nextFloat() * 2 - 1) * jitter;
-            float cy = (areaTop + areaBottom) / 2f + (random.nextFloat() * 2 - 1) * jitter;
+            float cy = (areaTop + areaBottom) / 2f + (random.nextFloat() * 2 - 1) * jitterY;
             float tilt = REST[i][2] + (random.nextFloat() * 2 - 1) * JITTER_DEG;
             card.setVisibility(View.VISIBLE);
             photo.setImageBitmap(p.bitmap);
@@ -334,7 +337,7 @@ public class PhotoDream extends DreamService {
     private void nudgeClock() {
         float d = density * NUDGE_DP;
         clock.animate().translationX((random.nextFloat() * 2 - 1) * d)
-                .translationY(random.nextFloat() * -d).setStartDelay(0).setDuration(1500).start();
+                .translationY(random.nextFloat() * -NUDGE_UP_DP * density).setStartDelay(0).setDuration(1500).start();
     }
 
     /** Drops the view's photo and frees its pixels now rather than at the next GC. */
