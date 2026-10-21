@@ -568,6 +568,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             belowDockHidden = true;
             // Where the dock sits once laid out: the On this day print sizes itself to the room above it.
             grid.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> grid.post(this::reportDockTop));
+            grid.getViewTreeObserver().addOnGlobalFocusChangeListener((oldFocus, newFocus) -> updateMoreHint());
         }
         btnSettings.setOnLongClickListener(v -> {
             showSettingsMenu();
@@ -2277,15 +2278,20 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (animations) child.animate().alpha(tileAlpha(pos)).setDuration(hidden ? 140 : 220).start();
             else child.setAlpha(tileAlpha(pos));
         }
+        updateMoreHint();
+    }
+
+    /** The chevron: only while the dock itself has focus (not the top bar) and the rows below are hidden. */
+    private void updateMoreHint() {
+        if (!moreAppsHint) return;
         boolean more = adapter != null && adapter.getItemCount() > COLUMNS;
-        float hint = hidden && more ? 1f : 0f;
+        float hint = belowDockHidden && more && grid.hasFocus() ? 1f : 0f;
         if (moreHint.getAlpha() == hint) return;
         moreHint.animate().cancel();
-        if (animations) moreHint.animate().alpha(hint).setDuration(hidden ? 260 : 120).start();
+        if (animations) moreHint.animate().alpha(hint).setDuration(hint > 0 ? 260 : 120).start();
         else moreHint.setAlpha(hint);
     }
 
-    /** Where the dock band starts when parked, in window px, for the On this day print to size itself above. */
     /**
      * Where the dock band starts on screen when the dock is parked: the dock row sits on the grid's top padding, and
      * DockDecoration's 6dp offset plus the item's 8dp padding put the card 14dp lower, the band 14dp above the card.

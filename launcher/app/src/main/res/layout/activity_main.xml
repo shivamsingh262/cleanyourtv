@@ -325,23 +325,17 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- more_apps_hint: under the dock while the rows below it are hidden; Down brings them up. -->
-    <TextView
+    <!-- more_apps_hint: a chevron under the dock while the dock has focus and the rows below are hidden; Down
+         brings them up. -->
+    <ImageView
         android:id="@+id/moreHint"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
         android:layout_gravity="bottom|center_horizontal"
-        android:layout_marginBottom="10dp"
-        android:gravity="center"
-        android:text="@string/more_apps"
-        android:textColor="#99FFFFFF"
-        android:textSize="13sp"
-        android:fontFamily="@font/outfit_medium"
-        android:letterSpacing="0.12"
-        android:textAllCaps="true"
-        android:drawableEnd="@drawable/ic_more_down"
-        android:drawableTint="#99FFFFFF"
-        android:drawablePadding="2dp"
+        android:layout_marginBottom="12dp"
+        android:src="@drawable/ic_more_down"
+        android:tint="#99FFFFFF"
+        android:contentDescription="@string/more_apps"
         android:alpha="0"
         android:visibility="gone"
         android:focusable="false" />
