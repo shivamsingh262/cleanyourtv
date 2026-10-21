@@ -72,5 +72,19 @@
             android:fontFamily="@font/outfit_regular"
             android:letterSpacing="0.14"
             android:textAllCaps="true" />
+
+        <!-- Home's weather and next sunrise or sunset (HomeInfo.lineFor); gone without a place. -->
+        <TextView
+            android:id="@+id/photoInfo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:layout_marginTop="10dp"
+            android:singleLine="true"
+            android:textColor="#B3FFFFFF"
+            android:textSize="15sp"
+            android:fontFamily="@font/outfit_regular"
+            android:letterSpacing="0.04"
+            android:visibility="gone" />
     </LinearLayout>
 </FrameLayout>

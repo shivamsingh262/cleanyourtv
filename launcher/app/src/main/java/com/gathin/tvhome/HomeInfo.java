@@ -1,6 +1,7 @@
 package com.gathin.tvhome;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
@@ -182,6 +183,38 @@ final class HomeInfo {
     private void render() {
         if (!lineOn) return;
         main.removeCallbacks(renderAgain);
+        long[] next = new long[1];
+        CharSequence text = compose(activity, line, weatherOn, latitude, longitude, next);
+        if (next[0] > 0 && thread != null) main.postDelayed(renderAgain, next[0]);
+        line.setText(text);
+        line.setVisibility(text.length() > 0 ? View.VISIBLE : View.GONE);
+    }
+
+    private final Runnable renderAgain = this::render;
+
+    /**
+     * The same line for another screen (the Photos screensaver), from the last reading Home kept: nothing is
+     * fetched. Empty without a place, or with config.xml weather off.
+     */
+    static CharSequence lineFor(Context c, TextView style) {
+        Resources res = c.getResources();
+        double lat, lon;
+        try {
+            lat = Double.parseDouble(res.getString(R.string.latitude).trim());
+            lon = Double.parseDouble(res.getString(R.string.longitude).trim());
+        } catch (NumberFormatException e) {
+            return "";
+        }
+        if (!res.getBoolean(R.bool.weather)) return "";
+        boolean net = c.checkSelfPermission(android.Manifest.permission.INTERNET)
+                == android.content.pm.PackageManager.PERMISSION_GRANTED;
+        return compose(c, style, net, lat, lon, new long[1]);
+    }
+
+    /** Builds the line; next[0] gets the milliseconds until the next sunrise or sunset, when it should change. */
+    private static CharSequence compose(Context c, TextView style, boolean weather, double latitude, double longitude,
+                                        long[] next) {
+        SharedPreferences prefs = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         ZoneId zone = ZoneId.systemDefault();
         LocalDate today = LocalDate.now(zone);
         LocalTime nowTime = LocalTime.now(zone);
@@ -190,21 +223,21 @@ final class HomeInfo {
         boolean day = sun == null || (nowMin >= sun[0] && nowMin < sun[1]);
         SpannableStringBuilder text = new SpannableStringBuilder();
         String json = prefs.getString("json", null);
-        if (weatherOn && json != null && System.currentTimeMillis() - prefs.getLong("at", 0) < STALE_MS) {
+        if (weather && json != null && System.currentTimeMillis() - prefs.getLong("at", 0) < STALE_MS) {
             try {
                 JSONObject o = new JSONObject(json);
                 JSONObject now = o.getJSONObject("current");
                 JSONObject daily = o.getJSONObject("daily");
                 int code = now.getInt("weather_code");
-                icon(text, conditionIcon(code, day));
-                text.append(activity.getString(R.string.weather_now,
-                        Math.round(now.getDouble("temperature_2m")), condition(code)));
+                icon(c, style, text, conditionIcon(code, day));
+                text.append(c.getString(R.string.weather_now,
+                        Math.round(now.getDouble("temperature_2m")), condition(c, code)));
                 text.append(SEP);
-                icon(text, R.drawable.wx_high);
-                text.append(activity.getString(R.string.degrees,
+                icon(c, style, text, R.drawable.wx_high);
+                text.append(c.getString(R.string.degrees,
                         Math.round(daily.getJSONArray("temperature_2m_max").getDouble(0)))).append("  ");
-                icon(text, R.drawable.wx_low);
-                text.append(activity.getString(R.string.degrees,
+                icon(c, style, text, R.drawable.wx_low);
+                text.append(c.getString(R.string.degrees,
                         Math.round(daily.getJSONArray("temperature_2m_min").getDouble(0))));
             } catch (Exception ignored) {
                 // A reading we cannot read is left out; the sun time still shows.
@@ -212,43 +245,39 @@ final class HomeInfo {
         }
         if (sun != null) {
             if (text.length() > 0) text.append(SEP);
-            icon(text, R.drawable.wx_twilight);
+            icon(c, style, text, R.drawable.wx_twilight);
             int untilMin;
             if (nowMin < sun[0]) {
-                text.append(activity.getString(R.string.sunrise, clock(sun[0])));
+                text.append(c.getString(R.string.sunrise, clock(c, sun[0])));
                 untilMin = sun[0] - nowMin;
             } else if (nowMin < sun[1]) {
-                text.append(activity.getString(R.string.sunset, clock(sun[1])));
+                text.append(c.getString(R.string.sunset, clock(c, sun[1])));
                 untilMin = sun[1] - nowMin;
             } else {
                 int[] tomorrow = Sun.riseAndSet(today.plusDays(1), latitude, longitude, zone);
                 int rise = tomorrow != null ? tomorrow[0] : sun[0];
-                text.append(activity.getString(R.string.sunrise, clock(rise)));
+                text.append(c.getString(R.string.sunrise, clock(c, rise)));
                 untilMin = 1440 - nowMin + rise;
             }
             // Just after the event, on the minute; a day change is caught the same way, at the next sunrise.
-            long ms = untilMin * 60_000L - nowTime.getSecond() * 1000L + 1000L;
-            if (thread != null) main.postDelayed(renderAgain, Math.max(1000L, ms));
+            next[0] = Math.max(1000L, untilMin * 60_000L - nowTime.getSecond() * 1000L + 1000L);
         }
-        line.setText(text);
-        line.setVisibility(text.length() > 0 ? View.VISIBLE : View.GONE);
+        return text;
     }
 
-    private final Runnable renderAgain = this::render;
-
     /** An icon the size of the line's capitals, in the line's colour, then a thin space. */
-    private void icon(SpannableStringBuilder text, int drawable) {
-        Drawable d = activity.getDrawable(drawable);
+    private static void icon(Context c, TextView style, SpannableStringBuilder text, int drawable) {
+        Drawable d = c.getDrawable(drawable);
         if (d == null) return;
         d = d.mutate();
-        int size = Math.round(line.getTextSize() * 1.2f);
+        int size = Math.round(style.getTextSize() * 1.2f);
         d.setBounds(0, 0, size, size);
-        d.setTint(line.getCurrentTextColor());
+        d.setTint(style.getCurrentTextColor());
         int start = text.length();
-        text.append('￼');
+        text.append('\uFFFC');
         int align = Build.VERSION.SDK_INT >= 29 ? ImageSpan.ALIGN_CENTER : ImageSpan.ALIGN_BASELINE;
         text.setSpan(new ImageSpan(d, align), start, start + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        text.append(' ');
+        text.append('\u2009');
     }
 
     /** The picture for a WMO code, with the moon in place of the sun at night. */
@@ -263,14 +292,14 @@ final class HomeInfo {
         return R.drawable.wx_cloudy;
     }
 
-    private String clock(int minutes) {
+    private static String clock(Context c, int minutes) {
         LocalTime t = LocalTime.of((minutes / 60) % 24, minutes % 60);
-        boolean h24 = DateFormat.is24HourFormat(activity);
+        boolean h24 = DateFormat.is24HourFormat(c);
         return t.format(DateTimeFormatter.ofPattern(h24 ? "H:mm" : "h:mm a", Locale.getDefault()));
     }
 
     /** WMO weather interpretation codes, as Open-Meteo reports them, in a word or two. */
-    private String condition(int code) {
+    private static String condition(Context c, int code) {
         int id;
         if (code == 0) id = R.string.weather_clear;
         else if (code == 1) id = R.string.weather_mostly_clear;
@@ -284,7 +313,7 @@ final class HomeInfo {
         else if (code == 85 || code == 86) id = R.string.weather_snow;
         else if (code >= 95) id = R.string.weather_thunder;
         else id = R.string.weather_cloudy;
-        return activity.getString(id);
+        return c.getString(id);
     }
 
     /** Background thread: one request for now and today, kept in prefs. A failure keeps the last reading. */
