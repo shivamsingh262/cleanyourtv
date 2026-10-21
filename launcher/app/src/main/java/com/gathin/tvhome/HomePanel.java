@@ -164,11 +164,13 @@ final class HomePanel {
         DateTimeFormatter clock = DateTimeFormatter.ofPattern(h24 ? "HH:mm" : "h:mm a", Locale.getDefault());
         DateTimeFormatter weekday = DateTimeFormatter.ofPattern("EEE", Locale.getDefault());
         int shown = 0;
+        agendaExtra = 0;
         for (CalendarFeed.Event e : events) {
-            if (shown == AGENDA_MAX) break;
-            if (!e.allDay && !e.start.plusMinutes(30).isAfter(now) && e.start.isBefore(now.minusMinutes(1))) {
-                // Begun more than a moment ago: still "Now" for half an hour, then it makes way.
-                if (e.start.plusMinutes(30).isBefore(now)) continue;
+            // Begun more than half an hour ago: it makes way.
+            if (!e.allDay && e.start.plusMinutes(30).isBefore(now)) continue;
+            if (shown == AGENDA_MAX) {
+                agendaExtra++;   // counted for "+N more"
+                continue;
             }
             LocalDate day = e.start.toLocalDate();
             String when;
@@ -192,6 +194,26 @@ final class HomePanel {
             shown++;
         }
         agenda.setVisibility(shown > 0 ? View.VISIBLE : View.GONE);
+    }
+
+    /** Upcoming events with no row: past AGENDA_MAX, or given way to fit above the dock. */
+    private int agendaExtra;
+
+    /** "+N more" at the end of the last agenda row, when some events have no row. */
+    private void markMore() {
+        int rows = agenda.getChildCount();
+        if (rows == 0) return;
+        LinearLayout last = (LinearLayout) agenda.getChildAt(rows - 1);
+        View old = last.findViewWithTag("more");
+        if (old != null) last.removeView(old);
+        if (agendaExtra <= 0) return;
+        TextView more = text(14, 0x99FFFFFF, R.font.outfit_medium);
+        more.setTag("more");
+        more.setText(activity.getString(R.string.agenda_more, agendaExtra));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.setMarginStart(Math.round(12 * density));
+        last.addView(more, lp);
     }
 
     private View agendaRow(String when, String title, boolean soon, int[] weather) {
@@ -392,20 +414,28 @@ final class HomePanel {
      */
     private void fit() {
         if (bottomLimit <= 0) return;
+        // Measured as laid out: the panel's real top on screen, and every row at the panel's real width.
         int[] at = new int[2];
-        for (int guard = 0; guard < 6; guard++) {
-            panel.getLocationInWindow(at);
-            panel.measure(View.MeasureSpec.makeMeasureSpec(panel.getWidth(), View.MeasureSpec.EXACTLY),
+        panel.getLocationInWindow(at);
+        int width = panel.getWidth() > 0 ? panel.getWidth() : panel.getLayoutParams().width;
+        for (int guard = 0; guard < 8; guard++) {
+            panel.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
                     View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
-            if (at[1] + panel.getMeasuredHeight() <= bottomLimit) return;
-            if (agenda.getChildCount() > 1) {
+            if (at[1] + panel.getMeasuredHeight() <= bottomLimit) break;
+            if (agenda.getVisibility() == View.VISIBLE && agenda.getChildCount() > 1) {
                 agenda.removeViewAt(agenda.getChildCount() - 1);
+                agendaExtra++;
             } else if (noteText.getMaxLines() > 1 && noteCard.getVisibility() == View.VISIBLE) {
                 noteText.setMaxLines(1);
+            } else if (agenda.getVisibility() == View.VISIBLE && agenda.getChildCount() == 1) {
+                agenda.removeViewAt(0);   // not even one row fits: the agenda waits for more room
+                agenda.setVisibility(View.GONE);
+                agendaExtra++;
             } else {
-                return;
+                break;
             }
         }
+        markMore();
     }
 
     /** With the shelf: shown while the dock has focus, hidden in the grid. */

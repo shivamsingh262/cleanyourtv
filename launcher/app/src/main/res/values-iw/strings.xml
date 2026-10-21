@@ -114,6 +114,7 @@
     <string name="agenda_now">עכשיו</string>
     <string name="agenda_in_minutes">בעוד %1$d דק׳</string>
     <string name="agenda_tomorrow">מחר</string>
+    <string name="agenda_more">ועוד %1$d</string>
     <string name="reminder_when">בעוד %1$d דק׳ · %2$s</string>
     <string name="aqi_good">טוב</string>
     <string name="aqi_satisfactory">משביע רצון</string>

@@ -71,7 +71,7 @@ final class HomeInfo {
      * corner to do so.
      */
     private static final float MAX_W_FRACTION = 0.34f;
-    private static final int CARD_EXTRA_DP = 0, DOCK_GAP_DP = 14, MENU_GAP_DP = 18;
+    private static final int CARD_EXTRA_DP = 0, DOCK_GAP_DP = 30, MENU_GAP_DP = 18;
     /** The date tools/photos.sh puts in each name: photo-0007-20231202.jpg, or only the month, -202312. */
     private static final Pattern NAME_DATE = Pattern.compile("-(\\d{4})(\\d{2})(\\d{2})?\\.[A-Za-z]+$");
 

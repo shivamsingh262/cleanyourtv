@@ -2284,10 +2284,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     /** Where the dock band starts when parked, in window px, for the On this day print to size itself above. */
+    /**
+     * Where the dock band starts on screen when the dock is parked: the dock row sits on the grid's top padding, and
+     * DockDecoration's 6dp offset plus the item's 8dp padding put the card 14dp lower, the band 14dp above the card.
+     */
     private void reportDockTop() {
         int[] at = new int[2];
         grid.getLocationInWindow(at);
-        homeInfo.setDockTop(at[1] + grid.getPaddingTop() - Math.round(20 * density));
+        homeInfo.setDockTop(at[1] + grid.getPaddingTop());
     }
 
     private void makeIconOnly(TextView pill) {
