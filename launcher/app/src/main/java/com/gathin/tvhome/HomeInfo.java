@@ -173,7 +173,7 @@ final class HomeInfo {
         calendarUrls = net ? urls : java.util.Collections.emptyList();
         boolean playingOn = res.getBoolean(R.bool.now_playing);
         panel = new HomePanel(activity, prefs, notesOn, weatherOn && res.getBoolean(R.bool.hourly_forecast), airOn,
-                !calendarUrls.isEmpty(), playingOn);
+                !calendarUrls.isEmpty() || telegram != null, playingOn);
         nowPlaying = playingOn ? new NowPlaying(activity, panel::setTrack) : null;
         // The panel ends where the photo starts: follow the photo's actual bounds whenever it is laid out anew.
         if (memory != null && panel.on()) {
@@ -193,6 +193,7 @@ final class HomeInfo {
         panel.refresh();
         if (panel.on()) main.postDelayed(panelTick, PANEL_TICK_MS);
         if (nowPlaying != null) nowPlaying.start();
+        if (telegram != null) panel.setEvents(agenda());   // the Telegram events at once, before any calendar read
         if (!calendarUrls.isEmpty()) {
             h.post(new Runnable() {
                 @Override
@@ -201,7 +202,7 @@ final class HomeInfo {
                     long wait = CALENDAR_MS;
                     if (System.currentTimeMillis() - calendarAt >= CALENDAR_SOON_MS) {
                         java.util.List<CalendarFeed.Event> next = readCalendars();
-                        main.post(() -> panel.setEvents(next));
+                        main.post(() -> panel.setEvents(agenda()));
                         // Something within the hour: look again sooner, so a last-minute change shows.
                         if (!next.isEmpty() && java.time.Duration.between(java.time.ZonedDateTime.now(),
                                 next.get(0).start).toMinutes() < 60) wait = CALENDAR_SOON_MS;
@@ -215,7 +216,7 @@ final class HomeInfo {
                 @Override
                 public void run() {
                     if (bg != h) return;
-                    if (telegram.poll()) main.post(panel::refresh);
+                    if (telegram.poll()) main.post(() -> panel.setEvents(agenda()));
                     h.postDelayed(this, NOTE_POLL_MS);
                 }
             });
@@ -548,7 +549,24 @@ final class HomeInfo {
             }
         }
         calendarAt = System.currentTimeMillis();
-        return CalendarFeed.upcoming(calendars, java.time.ZonedDateTime.now(), 7, 10);
+        calendarEvents = CalendarFeed.upcoming(calendars, java.time.ZonedDateTime.now(), 7, 10);
+        return calendarEvents;
+    }
+
+    /** The Google Calendar events last read and the ones set from Telegram, soonest first. */
+    private volatile java.util.List<CalendarFeed.Event> calendarEvents = java.util.Collections.emptyList();
+
+    private java.util.List<CalendarFeed.Event> agenda() {
+        java.util.List<CalendarFeed.Event> all = new java.util.ArrayList<>(calendarEvents);
+        if (telegram != null) {
+            java.time.ZonedDateTime now = java.time.ZonedDateTime.now();
+            for (CalendarFeed.Event e : TelegramNotes.events(
+                    activity.getSharedPreferences(TelegramNotes.PREFS, Activity.MODE_PRIVATE), now)) {
+                if (!e.start.isAfter(now.plusDays(7))) all.add(e);
+            }
+        }
+        all.sort((a, b) -> a.start.compareTo(b.start));
+        return all;
     }
 
     /** Background thread: one request for now and today, kept in prefs. A failure keeps the last reading. */
