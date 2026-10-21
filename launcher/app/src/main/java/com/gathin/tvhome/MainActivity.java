@@ -2207,7 +2207,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // the dock, and with rows_below_dock the row after the visible one stays off the screen.
         View gridFrame = (View) grid.getParent();
         ViewGroup.MarginLayoutParams gp = (ViewGroup.MarginLayoutParams) gridFrame.getLayoutParams();
-        gp.topMargin += Math.round(34 * density);
+        gp.topMargin += Math.round(56 * density);
         gridFrame.setLayoutParams(gp);
         btnMenu.setVisibility(View.VISIBLE);
         btnMenu.setOnClickListener(v -> setBarOpen(!barOpen, true));
