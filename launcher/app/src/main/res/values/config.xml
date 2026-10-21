@@ -234,6 +234,9 @@
     <!-- A banner over whatever is on screen this many minutes before a timed agenda event; 0 is off. Needs "display
          over other apps", once: adb shell appops set com.gathin.tvhome SYSTEM_ALERT_WINDOW allow -->
     <integer name="reminder_minutes">0</integer>
+    <!-- From 23:00 to 06:00 Home's photo, panel and apps fade to 60%; the clock and the line under it stay. Any key
+         brings it back for five minutes. -->
+    <bool name="night_dim">false</bool>
 
     <!-- Cinematic top shelf: the focused dock app's artwork, softened, fills the top of the screen in its
          colour; the shelf gets a larger name, a "Last opened" line (from the apps Home opened) and dock position

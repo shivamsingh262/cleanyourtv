@@ -126,4 +126,17 @@
     <string name="signal_strong">חזק</string>
     <string name="signal_good">טוב</string>
     <string name="signal_weak">חלש</string>
+    <string name="memory_on_this_day">ביום הזה · %1$s</string>
+    <string name="memory_this_week">השבוע · %1$s</string>
+    <string name="memory_this_month">החודש · %1$s</string>
+    <plurals name="memory_years_ago">
+        <item quantity="one">לפני שנה</item>
+        <item quantity="two">לפני שנתיים</item>
+        <item quantity="other">לפני %d שנים</item>
+    </plurals>
+    <plurals name="memory_months_ago">
+        <item quantity="one">לפני חודש</item>
+        <item quantity="two">לפני חודשיים</item>
+        <item quantity="other">לפני %d חודשים</item>
+    </plurals>
 </resources>

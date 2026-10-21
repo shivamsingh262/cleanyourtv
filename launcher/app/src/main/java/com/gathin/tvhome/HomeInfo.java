@@ -110,6 +110,7 @@ final class HomeInfo {
     private static final long CALENDAR_MS = 30 * 60_000L, CALENDAR_SOON_MS = 10 * 60_000L;
     private final NowPlaying nowPlaying;
     private final int reminderMinutes;
+    private final boolean nightDim;
     private static final long NOTE_POLL_MS = 45_000L, PANEL_TICK_MS = 60_000L;
     private final Runnable panelTick = new Runnable() {
         @Override
@@ -179,6 +180,7 @@ final class HomeInfo {
                 !calendarUrls.isEmpty() || telegram != null, playingOn);
         nowPlaying = playingOn ? new NowPlaying(activity, panel::setTrack) : null;
         reminderMinutes = Math.max(0, Math.min(120, res.getInteger(R.integer.reminder_minutes)));
+        nightDim = res.getBoolean(R.bool.night_dim);
         // The panel ends where the photo starts: follow the photo's actual bounds whenever it is laid out anew.
         if (memory != null && panel.on()) {
             memory.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
@@ -242,14 +244,37 @@ final class HomeInfo {
                 }
             }, Math.max(0, WEATHER_MS - age));
         }
-        if (memoryOn && !LocalDate.now().equals(memoryDay)) {
-            LocalDate today = LocalDate.now();
-            memoryDay = today;
-            h.post(() -> chooseMemory(today));
+        if (memoryOn) {
+            // A new photo on a new day, after 30 minutes away from Home, or every two hours while it stays up.
+            long now = System.currentTimeMillis(), at = prefs.getLong("memAt", 0), away = prefs.getLong("awayAt", now);
+            boolean fresh = !LocalDate.now().equals(memoryDay) || now - away >= MEMORY_AWAY_MS || now - at >= MEMORY_EVERY_MS;
+            if (fresh || !memoryFound) nextMemory(h);
+            h.postDelayed(memoryTick, Math.max(1000, MEMORY_EVERY_MS - (fresh ? 0 : now - at)));
         }
+        nightTick.run();
+    }
+
+    private static final long MEMORY_EVERY_MS = 2 * 60 * 60_000L, MEMORY_AWAY_MS = 30 * 60_000L;
+
+    private final Runnable memoryTick = new Runnable() {
+        @Override
+        public void run() {
+            Handler h = bg;
+            if (h == null) return;
+            nextMemory(h);
+            h.postDelayed(this, MEMORY_EVERY_MS);
+        }
+    };
+
+    private void nextMemory(Handler h) {
+        LocalDate today = LocalDate.now();
+        memoryDay = today;
+        h.post(() -> chooseMemory(today));
     }
 
     void stop() {
+        prefs.edit().putLong("awayAt", System.currentTimeMillis()).apply();
+        main.removeCallbacks(nightTick);
         main.removeCallbacks(renderAgain);
         main.removeCallbacks(panelTick);
         if (nowPlaying != null) nowPlaying.stop();
@@ -258,6 +283,55 @@ final class HomeInfo {
         thread.quit();
         thread = null;
         bg = null;
+    }
+
+    // ---- night dimming (config.xml night_dim) ---------------------------------------------------
+
+    /** 23:00 to 06:00: the photo, the panel and the apps at NIGHT_ALPHA; the clock and the line under it stay. */
+    private static final int NIGHT_FROM = 23, NIGHT_TO = 6;
+    private static final float NIGHT_ALPHA = 0.6f;
+    private static final long WAKE_MS = 5 * 60_000L;
+    private long wokeAt;
+    private boolean dimmed;
+
+    private final Runnable nightTick = new Runnable() {
+        @Override
+        public void run() {
+            applyNight(true);
+            main.removeCallbacks(this);
+            if (nightDim) main.postDelayed(this, 30_000L);
+        }
+    };
+
+    /** MainActivity: a key was pressed on Home; full brightness for WAKE_MS. */
+    void wake() {
+        if (!nightDim) return;
+        wokeAt = System.currentTimeMillis();
+        applyNight(true);
+    }
+
+    private void applyNight(boolean animate) {
+        if (!nightDim) return;
+        int hour = LocalTime.now().getHour();
+        boolean night = (hour >= NIGHT_FROM || hour < NIGHT_TO) && System.currentTimeMillis() - wokeAt > WAKE_MS;
+        if (night == dimmed) return;
+        dimmed = night;
+        float a = night ? NIGHT_ALPHA : 1f;
+        // The photo, the panel's parts and the apps; the panel and the hint keep their own alpha for show and hide.
+        for (int id : new int[]{R.id.memoryCard, R.id.grid, R.id.moreHint, R.id.noteCard, R.id.hoursBlock, R.id.agenda}) {
+            setNightAlpha(id, a);
+        }
+    }
+
+    private void setNightAlpha(int id, float a) {
+        View v = activity.findViewById(id);
+        if (v == null) return;
+        if (id == R.id.moreHint) {
+            // The hint's own alpha shows and hides it; scale it only when shown.
+            if (v.getAlpha() > 0f) v.animate().alpha(a).setDuration(600).start();
+            return;
+        }
+        v.animate().alpha(a).setDuration(600).start();
     }
 
     /** MainActivity: where the dock band starts, in window px. The print grows into the room above it. */
@@ -694,45 +768,65 @@ final class HomeInfo {
     // ---- on this day -----------------------------------------------------------------------------
 
     /** Background thread: picks today's print and hands it to the main thread. */
+    /**
+     * Background thread: the next photo. Best matches first: taken on this day in an earlier year, then this week,
+     * then this month; then every other photo at least a month old, in an order fixed for the day. Each is shown once
+     * a day (the photos shown today are kept in prefs); once all have been, the round starts again.
+     */
     private void chooseMemory(LocalDate today) {
         File[] files = new File(activity.getExternalFilesDir(null), PhotoDream.DIR).listFiles();
-        List<File> day = new ArrayList<>(), week = new ArrayList<>(), month = new ArrayList<>();
-        List<LocalDate> dates = new ArrayList<>();
+        List<File> day = new ArrayList<>(), week = new ArrayList<>(), month = new ArrayList<>(), rest = new ArrayList<>();
         if (files != null) {
             for (File f : files) {
                 LocalDate taken = taken(f);
-                if (taken == null || taken.getYear() >= today.getYear()) continue;
-                LocalDate sameYear;
-                try {
-                    sameYear = taken.withYear(today.getYear());
-                } catch (Exception e) {
-                    continue;
-                }
-                long apart = Math.abs(ChronoUnit.DAYS.between(today, sameYear));
-                if (!dayKnown(f)) {
-                    if (taken.getMonthValue() == today.getMonthValue()) month.add(f);   // a month-only name
-                } else if (taken.getMonthValue() == today.getMonthValue()
-                        && taken.getDayOfMonth() == today.getDayOfMonth()) {
-                    day.add(f);
-                } else if (apart <= 3) {
-                    week.add(f);
-                } else if (taken.getMonthValue() == today.getMonthValue()) {
-                    month.add(f);
-                }
+                if (taken == null || taken.isAfter(today.minusMonths(1))) continue;   // undated, or too recent to be a memory
+                boolean earlierYear = taken.getYear() < today.getYear();
+                long apart = earlierYear ? Math.abs(ChronoUnit.DAYS.between(today,
+                        taken.withDayOfMonth(Math.min(taken.getDayOfMonth(), 28)).withYear(today.getYear())
+                                .withDayOfMonth(Math.min(taken.getDayOfMonth(), today.withMonth(taken.getMonthValue())
+                                        .lengthOfMonth())))) : Long.MAX_VALUE;
+                if (earlierYear && dayKnown(f) && taken.getMonthValue() == today.getMonthValue()
+                        && taken.getDayOfMonth() == today.getDayOfMonth()) day.add(f);
+                else if (earlierYear && dayKnown(f) && apart <= 3) week.add(f);
+                else if (earlierYear && taken.getMonthValue() == today.getMonthValue()) month.add(f);
+                else rest.add(f);
             }
         }
-        List<File> pool = !day.isEmpty() ? day : !week.isEmpty() ? week : month;
-        int kicker = !day.isEmpty() ? R.string.memory_on_this_day
-                : !week.isEmpty() ? R.string.memory_this_week : R.string.memory_this_month;
-        if (pool.isEmpty()) {
+        java.util.Comparator<File> byName = (a, b) -> a.getName().compareTo(b.getName());
+        day.sort(byName);
+        week.sort(byName);
+        month.sort(byName);
+        rest.sort(byName);
+        java.util.Collections.shuffle(rest, new Random(today.toEpochDay()));
+        List<File> order = new ArrayList<>(day);
+        order.addAll(week);
+        order.addAll(month);
+        order.addAll(rest);
+        if (order.isEmpty()) {
             main.post(() -> setMemory(null, null, null, 0, 0));
             return;
         }
-        pool.sort((a, b) -> a.getName().compareTo(b.getName()));
-        File pick = pool.get(new Random(today.toEpochDay()).nextInt(pool.size()));   // the same one all day
+        String shownKey = "memShown:" + today;
+        String shown = prefs.getString(shownKey, "|");
+        File pick = null;
+        for (File f : order) {
+            if (!shown.contains("|" + f.getName() + "|")) {
+                pick = f;
+                break;
+            }
+        }
+        if (pick == null) {   // every photo shown today: start the round again
+            shown = "|";
+            pick = order.get(0);
+        }
+        prefs.edit().putString(shownKey, shown + pick.getName() + "|").putLong("memAt", System.currentTimeMillis()).apply();
+        int kicker = day.contains(pick) ? R.string.memory_on_this_day : week.contains(pick) ? R.string.memory_this_week
+                : R.string.memory_this_month;
         LocalDate taken = taken(pick);
-        int years = today.getYear() - taken.getYear();
-        String ago = activity.getResources().getQuantityString(R.plurals.memory_years_ago, years, years);
+        java.time.Period gap = java.time.Period.between(taken, today);
+        String ago = gap.getYears() >= 1
+                ? activity.getResources().getQuantityString(R.plurals.memory_years_ago, gap.getYears(), gap.getYears())
+                : activity.getResources().getQuantityString(R.plurals.memory_months_ago, gap.getMonths(), gap.getMonths());
         String head = activity.getString(kicker, ago);
         String date = new DateFormatSymbols().getShortMonths()[taken.getMonthValue() - 1] + " " + taken.getYear();
         float density = activity.getResources().getDisplayMetrics().density;
@@ -780,6 +874,11 @@ final class HomeInfo {
             memory.setVisibility(View.GONE);
             layoutPanel();
             return;
+        }
+        // A photo already up: cross-fade to the new one rather than cutting.
+        if (old != null && memory.getAlpha() > 0f) {
+            memoryPhoto.setAlpha(0.15f);
+            memoryPhoto.animate().alpha(1f).setDuration(700).start();
         }
         memoryPhoto.setImageBitmap(bitmap);
         memoryBitmap = bitmap;

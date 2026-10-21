@@ -156,6 +156,10 @@
     <string name="memory_on_this_day">On this day · %1$s</string>
     <string name="memory_this_week">This week · %1$s</string>
     <string name="memory_this_month">This month · %1$s</string>
+    <plurals name="memory_months_ago">
+        <item quantity="one">%d month ago</item>
+        <item quantity="other">%d months ago</item>
+    </plurals>
     <plurals name="memory_years_ago">
         <item quantity="one">%d year ago</item>
         <item quantity="other">%d years ago</item>
