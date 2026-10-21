@@ -168,7 +168,7 @@
         android:focusable="false" />
 
     <!-- On this day (config.xml on_this_day, HomeInfo): one of the screensaver photos taken around today's date
-         in an earlier year, as a tilted print on the right of the top shelf. Shown and hidden with the shelf. -->
+         in an earlier year, as a rounded photo on the right of the top shelf. Shown and hidden with the shelf. -->
     <LinearLayout
         android:id="@+id/memory"
         android:layout_width="wrap_content"
@@ -194,16 +194,14 @@
             android:letterSpacing="0.2"
             android:textAllCaps="true" />
 
-        <LinearLayout
+        <!-- The photo itself, rounded like the app tiles, with when it was taken written over a fade at its foot.
+             HomeInfo clips it to the rounded outline. -->
+        <FrameLayout
+            android:id="@+id/memoryCard"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="#FFFAF7F1"
-            android:elevation="8dp"
-            android:rotation="-2"
-            android:paddingStart="8dp"
-            android:paddingTop="8dp"
-            android:paddingEnd="8dp">
+            android:background="@drawable/memory_card"
+            android:elevation="10dp">
 
             <ImageView
                 android:id="@+id/memoryPhoto"
@@ -215,13 +213,23 @@
             <TextView
                 android:id="@+id/memoryDate"
                 android:layout_width="match_parent"
-                android:layout_height="30dp"
-                android:gravity="center"
-                android:textColor="#FF3A3330"
-                android:textSize="17sp"
-                android:fontFamily="@font/caveat"
-                android:includeFontPadding="false" />
-        </LinearLayout>
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom"
+                android:background="@drawable/memory_caption_fade"
+                android:gravity="start|bottom"
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:paddingTop="28dp"
+                android:paddingBottom="11dp"
+                android:singleLine="true"
+                android:ellipsize="end"
+                android:textColor="#F2FFFFFF"
+                android:textSize="14sp"
+                android:fontFamily="@font/outfit_medium"
+                android:letterSpacing="0.04"
+                android:shadowColor="#80000000"
+                android:shadowRadius="4" />
+        </FrameLayout>
     </LinearLayout>
 
     <LinearLayout

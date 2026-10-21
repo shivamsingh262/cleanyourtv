@@ -116,6 +116,8 @@ public class PhotoDream extends DreamService {
         LayoutInflater inflater = LayoutInflater.from(this);
         for (int i = 0; i < PRINTS; i++) {
             cards[i] = inflater.inflate(R.layout.dream_print, stage, false);
+            // Drawn into a layer with a clear margin, the tilted card is filtered as one image: smooth edges.
+            cards[i].setLayerType(View.LAYER_TYPE_HARDWARE, null);
             photoViews[i] = cards[i].findViewById(R.id.printPhoto);
             dateViews[i] = cards[i].findViewById(R.id.printDate);
             cards[i].setTranslationX(screenW * 2f);   // off screen until the first deal
@@ -276,6 +278,7 @@ public class PhotoDream extends DreamService {
     private void deal(Print[] batch) {
         float side = SIDE_DP * density, top = TOP_DP * density, jitter = JITTER_DP * density;
         float colGap = COLUMN_GAP_DP * density;
+        int shadowRoom = getResources().getDimensionPixelSize(R.dimen.print_shadow_room);
         float areaTop = top, areaBottom = stripTop() - STRIP_GAP_DP * density;
         float colW = (screenW - 2 * side - (PRINTS - 1) * colGap) / PRINTS;
         // The box a tilted card must fit, leaving room for the play either way.
@@ -312,8 +315,8 @@ public class PhotoDream extends DreamService {
             photo.setLayoutParams(lp);
             dateViews[i].setText(p.date);
             FrameLayout.LayoutParams cp = (FrameLayout.LayoutParams) card.getLayoutParams();
-            cp.leftMargin = Math.round(cx - cw / 2f);
-            cp.topMargin = Math.round(cy - ch / 2f);
+            cp.leftMargin = Math.round(cx - cw / 2f) - shadowRoom;
+            cp.topMargin = Math.round(cy - ch / 2f) - shadowRoom;
             card.setLayoutParams(cp);
             card.animate().cancel();
             card.setTranslationX(screenW + 200f);

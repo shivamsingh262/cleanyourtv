@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The clear margin around a screensaver print (dream_print) that holds its shadow and smooth edges. -->
+    <dimen name="print_shadow_room">28dp</dimen>
+</resources>

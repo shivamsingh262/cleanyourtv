@@ -65,12 +65,12 @@ final class HomeInfo {
     private static final int OPEN_LANDSCAPE_W_DP = 240, OPEN_PORTRAIT_H_DP = 160, OPEN_TOP_DP = 6;
     /**
      * Roomy, once the dock's place is known (setDockTop): the photo is as tall as the room down to the dock allows,
-     * at most MAX_W_FRACTION of the screen wide. The card around it adds CARD_EXTRA_DP in height, and the print keeps
+     * at most MAX_W_FRACTION of the screen wide. Anything the frame adds below the photo is CARD_EXTRA_DP (none: the caption sits on it), and the print keeps
      * DOCK_GAP_DP clear of the dock and MENU_GAP_DP clear of the open top menu, shrinking towards its top right
      * corner to do so.
      */
     private static final float MAX_W_FRACTION = 0.34f;
-    private static final int CARD_EXTRA_DP = 44, DOCK_GAP_DP = 12, MENU_GAP_DP = 18;
+    private static final int CARD_EXTRA_DP = 0, DOCK_GAP_DP = 14, MENU_GAP_DP = 18;
     /** The date tools/photos.sh puts in each name: photo-0007-20231202.jpg, or only the month, -202312. */
     private static final Pattern NAME_DATE = Pattern.compile("-(\\d{4})(\\d{2})(\\d{2})?\\.[A-Za-z]+$");
 
@@ -105,6 +105,8 @@ final class HomeInfo {
         memoryPhoto = activity.findViewById(R.id.memoryPhoto);
         memoryKicker = activity.findViewById(R.id.memoryKicker);
         memoryDate = activity.findViewById(R.id.memoryDate);
+        View card = activity.findViewById(R.id.memoryCard);
+        if (card != null) card.setClipToOutline(true);   // the photo takes the card's rounded corners
         prefs = activity.getSharedPreferences(PREFS, Activity.MODE_PRIVATE);
         double lat = Double.NaN, lon = Double.NaN;
         try {
@@ -128,14 +130,7 @@ final class HomeInfo {
             lp.topMargin = Math.round(OPEN_TOP_DP * res.getDisplayMetrics().density);
             memory.setLayoutParams(lp);
             memoryKicker.setVisibility(View.GONE);
-            // Only "2 years ago" in the strip: it says when, so the print keeps the height for the photo.
-            ViewGroup.LayoutParams sp = memoryDate.getLayoutParams();
-            sp.height = ViewGroup.LayoutParams.WRAP_CONTENT;
-            memoryDate.setLayoutParams(sp);
-            memoryDate.setMaxLines(1);
-            memoryDate.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16);
-            int pad = Math.round(4 * res.getDisplayMetrics().density);
-            memoryDate.setPadding(0, pad, 0, pad + pad);
+            // Only "2 years ago" on the photo: it says when.
         }
     }
 
