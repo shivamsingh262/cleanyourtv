@@ -14,6 +14,8 @@ import androidx.recyclerview.widget.RecyclerView;
 /** Draws the tvOS style lighter band behind the first (dock) row and adds a gap below it. */
 public class DockDecoration extends RecyclerView.ItemDecoration {
 
+    /** How far above the grid's top edge the band starts fading out, in dp. */
+    private static final float FADE_DP = 60;
     private final int dockSize;
     private final float density;
     private final Paint band = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -26,6 +28,8 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
     private final boolean lightGlass;
     /** The band's top and bottom the glass gradient was made for; it is remade when they move. */
     private float shaderTop = Float.NaN, shaderBottom = Float.NaN;
+    /** The band's own alphas, which the scroll fade below scales. */
+    private int bandAlpha, edgeAlpha;
 
     /**
      * @param translucent the cinematic shelf's band: the artwork and the glow show through it.
@@ -41,6 +45,8 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
         edge.setStyle(Paint.Style.STROKE);
         edge.setStrokeWidth(density);
         edge.setColor(lightGlass ? 0x38FFFFFF : translucent ? 0x26FFFFFF : 0x1FFFFFFF);
+        bandAlpha = band.getAlpha();
+        edgeAlpha = edge.getAlpha();
     }
 
     @Override
@@ -82,6 +88,10 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
         float side = Math.max(0f, Math.min(pad, Math.min(rect.left, parent.getWidth() - rect.right) - density));
         rect.inset(-side, -pad);
         rect.bottom += namesRoom;
+        // Scrolling the grid carries the dock up past the grid's top edge, which would slice the band into a sliver:
+        // over the last FADE_DP before it reaches the edge the band fades out, and back in on the way down.
+        float fade = Math.max(0f, Math.min(1f, rect.top / (FADE_DP * density)));
+        if (fade <= 0f) return;
         float radius = 26 * density;
         if (lightGlass && (rect.top != shaderTop || rect.bottom != shaderBottom)) {
             // The pills' glass (pill_bg: white, 18% fading to 8%), a little fainter over this much larger area.
@@ -90,6 +100,8 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
             shaderTop = rect.top;
             shaderBottom = rect.bottom;
         }
+        band.setAlpha(Math.round(bandAlpha * fade));
+        edge.setAlpha(Math.round(edgeAlpha * fade));
         c.drawRoundRect(rect, radius, radius, band);
         c.drawRoundRect(rect, radius, radius, edge);
     }
