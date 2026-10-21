@@ -78,27 +78,23 @@ final class HomePanel {
     /** Fills the panel from prefs; cheap, called whenever the note, the readings or the hour change. */
     void refresh() {
         if (!on()) return;
-        noteCard.setVisibility(notesOn ? View.VISIBLE : View.GONE);
-        if (notesOn) {
-            String text = notes.getString(TelegramNotes.KEY_TEXT, "");
+        // No note: no card at all, and the forecast moves up into its place.
+        String text = notesOn ? notes.getString(TelegramNotes.KEY_TEXT, "") : "";
+        noteCard.setVisibility(text.isEmpty() ? View.GONE : View.VISIBLE);
+        if (!text.isEmpty()) {
             long at = notes.getLong(TelegramNotes.KEY_AT, 0);
-            if (text.isEmpty()) {
-                noteText.setText(R.string.note_empty);
-                noteText.setAlpha(0.55f);
-                noteMeta.setVisibility(View.GONE);
-            } else {
-                noteText.setText(text);
-                noteText.setAlpha(1f);
-                noteMeta.setVisibility(View.VISIBLE);
-                noteMeta.setText(activity.getString(R.string.note_updated, DateUtils.getRelativeTimeSpanString(
-                        at, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS)));
-            }
+            noteText.setText(text);
+            noteMeta.setText(activity.getString(R.string.note_updated, DateUtils.getRelativeTimeSpanString(
+                    at, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS)));
         }
         boolean hours = hoursOn && fillHours();
         boolean air = airOn && fillAir();
         hoursRow.setVisibility(hours ? View.VISIBLE : View.GONE);
         aqiBadge.setVisibility(air ? View.VISIBLE : View.GONE);
         hoursBlock.setVisibility(hours || air ? View.VISIBLE : View.GONE);
+        // The forecast keeps its gap under the note only when there is a note above it.
+        ((LinearLayout.LayoutParams) hoursBlock.getLayoutParams()).topMargin =
+                text.isEmpty() ? 0 : Math.round(16 * density);
     }
 
     /** The next HOURS hours from the forecast HomeInfo kept: time, icon, temperature. */

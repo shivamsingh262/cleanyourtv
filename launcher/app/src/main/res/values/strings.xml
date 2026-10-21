@@ -53,7 +53,6 @@
     <string name="top_menu">Menu</string>
     <string name="more_apps">More apps</string>
     <!-- HomePanel: the note card and the air quality on India's NAQI scale. -->
-    <string name="note_empty">No note. Send one to your Telegram bot.</string>
     <string name="note_updated">Updated %1$s</string>
     <string name="aqi_value">AQI %1$d</string>
     <string name="aqi_good">Good</string>
