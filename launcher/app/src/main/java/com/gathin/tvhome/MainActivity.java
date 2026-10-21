@@ -535,6 +535,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             libraryFromTopBar = true;   // closing it goes back to this button, not to the pill after the last row
         });
         btnLibraryTop.setVisibility(cfg.libraryButton && cfg.appLibrary ? View.VISIBLE : View.GONE);
+        reorderShown = cfg.reorderButton;
+        libraryTopShown = cfg.libraryButton && cfg.appLibrary;
+        btnScreensaverTop = findViewById(R.id.btnScreensaverTop);
+        screensaverShown = btnScreensaverTop != null && getResources().getBoolean(R.bool.screensaver_button);
+        if (btnScreensaverTop != null) {
+            btnScreensaverTop.setVisibility(screensaverShown ? View.VISIBLE : View.GONE);
+            // SystemUI's Somnambulator starts whichever screensaver is chosen in Settings, as "Start now" does.
+            btnScreensaverTop.setOnClickListener(v -> open(new Intent(Intent.ACTION_MAIN).setClassName(
+                    "com.android.systemui", "com.android.systemui.Somnambulator")));
+        }
         iconOnlyButtons = cfg.iconOnlyButtons;
         wifiIconOnly = iconOnlyButtons && cfg.wifiLabelWidth <= 0;
         if (iconOnlyButtons) {
@@ -584,8 +594,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         btnSettings.setOnKeyListener(pillKeys);
         btnReorder.setOnKeyListener(pillKeys);
         btnLibraryTop.setOnKeyListener(pillKeys);
+        if (btnScreensaverTop != null) btnScreensaverTop.setOnKeyListener(pillKeys);
         if (advancedEffects) {
-            for (View button : new View[]{btnInputs, btnWifi, btnReorder, btnLibraryTop, btnSettings}) {
+            for (View button : new View[]{btnInputs, btnWifi, btnReorder, btnLibraryTop, btnScreensaverTop, btnSettings}) {
+                if (button == null) continue;
                 button.setOnFocusChangeListener((view, focused) -> view.animate()
                         .scaleX(focused ? 1.04f : 1f).scaleY(focused ? 1.04f : 1f)
                         .setDuration(160).start());
@@ -636,6 +648,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         super.onNewIntent(intent);
         if (openLauncherSettingsIfAsked(intent)) return;
         if (intent == null || !intent.hasCategory(Intent.CATEGORY_HOME)) return;
+        // Home pressed on Home: close an open tray (inputs, network, settings menu) and fold the top menu too.
+        if (openPopup != null) openPopup.dismiss();
+        if (topMenu && barOpen) setBarOpen(false, false);
         grid.scrollToPosition(0);
         lastFocused = 0;
         lastFocusedKey = adapter.getItemCount() > 0 ? adapter.keyAt(0) : null;
@@ -2137,6 +2152,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private TextView btnMenu;
     /** config.xml network_tray: the network pill drops a tray of networks instead of opening Wi-Fi settings. */
     private boolean networkTray;
+    /** The top bar's optional buttons as configured (reorder_button, library_button, screensaver_button). */
+    private boolean reorderShown, libraryTopShown, screensaverShown;
+    private TextView btnScreensaverTop;
     /** The app library button in the top bar (library_button). */
     private View btnLibraryTop;
     /** The open library came from that button: closing it returns there instead of scrolling to the grid's end. */
@@ -2163,9 +2181,34 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         RelativeLayout.LayoutParams bp = (RelativeLayout.LayoutParams) bar.getLayoutParams();
         bp.removeRule(RelativeLayout.ALIGN_PARENT_END);
         bp.removeRule(RelativeLayout.ALIGN_PARENT_RIGHT);
-        bp.addRule(RelativeLayout.END_OF, R.id.leftBlock);
+        // With a place set, the line under the clock (weather, sunrise or sunset) always shows: the bar closes
+        // that line, so the left side reads as one block. Without one it follows the date.
+        View infoLine = findViewById(R.id.homeInfo);
+        boolean hasPlace = !getString(R.string.latitude).trim().isEmpty() && !getString(R.string.longitude).trim().isEmpty();
+        if (infoLine != null && hasPlace) {
+            bp.removeRule(RelativeLayout.ALIGN_BOTTOM);
+            bp.addRule(RelativeLayout.END_OF, R.id.homeInfo);
+            bp.addRule(RelativeLayout.ALIGN_TOP, R.id.homeInfo);
+            bp.topMargin = -Math.round(10 * density);   // centre the 42dp buttons on the line's text
+            bp.bottomMargin = 0;
+        } else {
+            bp.addRule(RelativeLayout.END_OF, R.id.leftBlock);
+        }
         bp.setMarginStart(Math.round(14 * density));
         bar.setLayoutParams(bp);
+        // Up to seven round buttons open in this row: closer together than the right-edge bar's pills.
+        ViewGroup row = (ViewGroup) bar;
+        for (int i = 0; i < row.getChildCount(); i++) {
+            ViewGroup.MarginLayoutParams cp = (ViewGroup.MarginLayoutParams) row.getChildAt(i).getLayoutParams();
+            cp.setMarginStart(i == 0 ? 0 : Math.round(8 * density));
+            row.getChildAt(i).setLayoutParams(cp);
+        }
+        // The apps start a little lower than under the right-edge bar: the On this day print gets the room above
+        // the dock, and with rows_below_dock the row after the visible one stays off the screen.
+        View gridFrame = (View) grid.getParent();
+        ViewGroup.MarginLayoutParams gp = (ViewGroup.MarginLayoutParams) gridFrame.getLayoutParams();
+        gp.topMargin += Math.round(34 * density);
+        gridFrame.setLayoutParams(gp);
         btnMenu.setVisibility(View.VISIBLE);
         btnMenu.setOnClickListener(v -> setBarOpen(!barOpen, true));
         setBarOpen(false, false);
@@ -2176,6 +2219,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         barOpen = open;
         btnInputs.setVisibility(open && inputsAvailable ? View.VISIBLE : View.GONE);
         btnWifi.setVisibility(open && networkPillShown ? View.VISIBLE : View.GONE);
+        btnReorder.setVisibility(open && reorderShown ? View.VISIBLE : View.GONE);
+        btnLibraryTop.setVisibility(open && libraryTopShown ? View.VISIBLE : View.GONE);
+        if (btnScreensaverTop != null) btnScreensaverTop.setVisibility(open && screensaverShown ? View.VISIBLE : View.GONE);
         findViewById(R.id.btnSettings).setVisibility(open ? View.VISIBLE : View.GONE);
         btnMenu.setCompoundDrawablesRelativeWithIntrinsicBounds(
                 open ? R.drawable.ic_menu_close : R.drawable.ic_menu_more, 0, 0, 0);

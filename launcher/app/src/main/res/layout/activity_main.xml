@@ -179,7 +179,7 @@
             android:orientation="vertical"
             android:background="#FFFAF7F1"
             android:elevation="8dp"
-            android:rotation="-3"
+            android:rotation="-2"
             android:paddingStart="8dp"
             android:paddingTop="8dp"
             android:paddingEnd="8dp">
@@ -421,6 +421,15 @@
                     android:visibility="gone"
                     android:contentDescription="@string/app_library"
                     android:drawableStart="@drawable/ic_apps"
+                    android:nextFocusDown="@+id/grid" />
+
+                <!-- screensaver_button: starts the chosen screensaver, as the quick settings panel's row does. -->
+                <TextView
+                    android:id="@+id/btnScreensaverTop"
+                    style="@style/TopButtonIcon"
+                    android:visibility="gone"
+                    android:contentDescription="@string/quick_screensaver"
+                    android:drawableStart="@drawable/ic_screensaver"
                     android:nextFocusDown="@+id/grid" />
 
                 <TextView

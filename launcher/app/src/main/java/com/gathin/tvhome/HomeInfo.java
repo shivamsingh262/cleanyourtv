@@ -60,7 +60,7 @@ final class HomeInfo {
     /** The print's photo, dp: a landscape photo's width, a portrait one's height. */
     private static final int MEMORY_LANDSCAPE_W_DP = 196, MEMORY_PORTRAIT_H_DP = 150;
     /** With top_menu the top right is free: a larger print near the top, its heading written in the strip. */
-    private static final int OPEN_LANDSCAPE_W_DP = 236, OPEN_PORTRAIT_H_DP = 210, OPEN_TOP_DP = 40;
+    private static final int OPEN_LANDSCAPE_W_DP = 190, OPEN_PORTRAIT_H_DP = 140, OPEN_TOP_DP = 26;
     /** The date tools/photos.sh puts in each name: photo-0007-20231202.jpg, or only the month, -202312. */
     private static final Pattern NAME_DATE = Pattern.compile("-(\\d{4})(\\d{2})(\\d{2})?\\.[A-Za-z]+$");
 
@@ -115,9 +115,15 @@ final class HomeInfo {
             lp.topMargin = Math.round(OPEN_TOP_DP * res.getDisplayMetrics().density);
             memory.setLayoutParams(lp);
             memoryKicker.setVisibility(View.GONE);
-            // "Oct 2024 · 2 years ago" is wider than a portrait print's strip: shrink to fit rather than cut.
-            memoryDate.setMaxLines(1);
-            memoryDate.setAutoSizeTextTypeUniformWithConfiguration(11, 17, 1, android.util.TypedValue.COMPLEX_UNIT_SP);
+            // "Oct 2024" and "2 years ago" on two lines of the strip: one line is wider than a portrait print.
+            ViewGroup.LayoutParams sp = memoryDate.getLayoutParams();
+            sp.height = ViewGroup.LayoutParams.WRAP_CONTENT;
+            memoryDate.setLayoutParams(sp);
+            memoryDate.setMaxLines(2);
+            memoryDate.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 15);
+            memoryDate.setLineSpacing(0, 0.9f);
+            int pad = Math.round(5 * res.getDisplayMetrics().density);
+            memoryDate.setPadding(0, pad, 0, pad + pad);
         }
     }
 
@@ -364,11 +370,18 @@ final class HomeInfo {
             w = Math.round((roomy ? OPEN_LANDSCAPE_W_DP : MEMORY_LANDSCAPE_W_DP) * density);
             h = Math.round(w * (float) size[1] / size[0]);
         }
+        // Roomy: the print sits between the top of the screen and the dock, so no photo is taller than a portrait one.
+        int maxH = Math.round(OPEN_PORTRAIT_H_DP * density);
+        if (roomy && h > maxH) {
+            w = Math.round(w * (float) maxH / h);
+            h = maxH;
+        }
         Bitmap bitmap = PhotoDream.decode(pick, w, h);
         if (bitmap == null) return;
-        // Roomy: no line above the print, so "how long ago" joins the date in the strip ("Oct 2024 · 2 years ago").
-        String strip = roomy ? date + " · " + ago : date;
-        main.post(() -> setMemory(bitmap, head, strip, w, h));
+        // Roomy: no line above the print, so "how long ago" goes under the date in the strip.
+        String strip = roomy ? date + "\n" + ago : date;
+        int photoW = w, photoH = h;
+        main.post(() -> setMemory(bitmap, head, strip, photoW, photoH));
     }
 
     private void setMemory(Bitmap bitmap, String head, String date, int w, int h) {

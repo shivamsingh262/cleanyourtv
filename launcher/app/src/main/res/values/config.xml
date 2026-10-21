@@ -132,6 +132,8 @@
          for the full Wi-Fi settings, instead of going straight to those settings. Off by default; ignored when
          vpn_app is set, as the pill opens that app then. -->
     <bool name="network_tray">false</bool>
+    <!-- A round button in the top bar that starts the chosen screensaver (beside Settings). Off by default. -->
+    <bool name="screensaver_button">false</bool>
     <!-- The app library as a round button in the top bar, beside Settings (app_library must be on too). -->
     <bool name="library_button">false</bool>
     <!-- With icon_only_buttons: keep the network name on the Wi-Fi pill up to this width in dp, cut with an ellipsis.

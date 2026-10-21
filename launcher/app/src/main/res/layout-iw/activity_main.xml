@@ -309,6 +309,15 @@
                 android:clipToPadding="false"
                 android:orientation="horizontal">
 
+                <!-- screensaver_button: starts the chosen screensaver, as the quick settings panel's row does. -->
+                <TextView
+                    android:id="@+id/btnScreensaverTop"
+                    style="@style/TopButtonIcon"
+                    android:visibility="gone"
+                    android:contentDescription="@string/quick_screensaver"
+                    android:drawableStart="@drawable/ic_screensaver"
+                    android:nextFocusDown="@+id/grid" />
+
                 <TextView
                     android:id="@+id/btnSettings"
                     style="@style/TopButton"
