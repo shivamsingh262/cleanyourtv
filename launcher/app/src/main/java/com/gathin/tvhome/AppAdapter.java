@@ -1,5 +1,6 @@
 package com.gathin.tvhome;
 
+import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
@@ -11,10 +12,13 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Outline;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.provider.Settings;
 import android.util.DisplayMetrics;
@@ -25,6 +29,7 @@ import android.view.ViewGroup;
 import android.view.ViewOutlineProvider;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.OvershootInterpolator;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -205,6 +210,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private final Map<String, String> launchActions;
     /** Tile names and bundled banners that replace the app's own (config.xml, app_labels and app_banners). */
     private final Map<String, String> appLabels, appBanners;
+    /** Banners darker and less saturated until focused, with a thin light edge (config.xml, soft_banners). */
+    private final boolean softBanners;
     private final List<Entry> items = new ArrayList<>();
 
     AppAdapter(Context ctx, TileListener listener, int dockSize, Config cfg) {
@@ -227,6 +234,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         this.launchActions = cfg.launchActions;
         this.appLabels = cfg.appLabels;
         this.appBanners = cfg.appBanners;
+        this.softBanners = ctx.getResources().getBoolean(R.bool.soft_banners);
         // Tiles keep their identity across reload(), so a focused tile stays on its app instead of
         // its view being rebound to whatever app now sits in that slot.
         setHasStableIds(true);
@@ -394,7 +402,13 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             v.setPadding(v.getPaddingLeft(), pad, v.getPaddingRight(), pad);
         }
         name.setLayoutParams(nameLp);
-        return new Holder(v, listener, animations, advancedEffects, reducedMotion, restNameAlpha);
+        if (softBanners) {
+            GradientDrawable edge = new GradientDrawable();
+            edge.setCornerRadius(cornerRadius(w, density));
+            edge.setStroke(Math.max(1, Math.round(density)), 0x33FFFFFF);
+            ((FrameLayout) card).setForeground(edge);
+        }
+        return new Holder(v, listener, animations, advancedEffects, reducedMotion, restNameAlpha, softBanners);
     }
 
     @Override
@@ -429,6 +443,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         // A fully opaque banner covers the whole card (centerCrop), so the card's own fill under it is drawn for
         // nothing on every frame; keep it under banners with transparent parts and under icon tiles.
         h.card.setBackground(e.banner != null && e.banner.getOpacity() == PixelFormat.OPAQUE ? null : h.cardBackground);
+        h.soften(!focused, false);
         if (e.banner != null) {
             h.banner.setImageDrawable(e.banner);
             h.banner.setVisibility(View.VISIBLE);
@@ -661,9 +676,13 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         final boolean reducedMotion;
         /** Alpha of the name while the tile is not focused (always_show_names). */
         final float restNameAlpha;
+        /** soft_banners: how far the artwork is toned down, 1 at rest and 0 when focused. */
+        final boolean softBanners;
+        private float soft = -1f;
+        private ValueAnimator softAnim;
 
         Holder(View v, TileListener listener, boolean animations, boolean advancedEffects,
-               boolean reducedMotion, float restNameAlpha) {
+               boolean reducedMotion, float restNameAlpha, boolean softBanners) {
             super(v);
             card = v.findViewById(R.id.card);
             cardBackground = card.getBackground();
@@ -675,6 +694,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             this.advancedEffects = advancedEffects;
             this.reducedMotion = reducedMotion;
             this.restNameAlpha = restNameAlpha;
+            this.softBanners = softBanners;
 
             final float density = v.getResources().getDisplayMetrics().density;
             card.setOutlineProvider(new ViewOutlineProvider() {
@@ -695,6 +715,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             });
 
             card.setOnFocusChangeListener((view, focused) -> {
+                soften(!focused, animations);
                 view.animate().cancel();
                 banner.animate().cancel();
                 name.animate().cancel();
@@ -741,6 +762,38 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     listener.onTileFocused(pos, view);
                 }
             });
+        }
+
+        /** soft_banners: tones the banner and the icon down (at rest) or back to full colour (focused). */
+        void soften(boolean rest, boolean animate) {
+            if (!softBanners) return;
+            float target = rest ? 1f : 0f;
+            if (softAnim != null) softAnim.cancel();
+            if (!animate || soft < 0f) {
+                applySoft(target);
+                return;
+            }
+            softAnim = ValueAnimator.ofFloat(soft, target).setDuration(rest ? 180 : 220);
+            softAnim.addUpdateListener(a -> applySoft((float) a.getAnimatedValue()));
+            softAnim.start();
+        }
+
+        private void applySoft(float t) {
+            soft = t;
+            if (t <= 0f) {
+                banner.clearColorFilter();
+                icon.clearColorFilter();
+                return;
+            }
+            ColorMatrix m = new ColorMatrix();
+            m.setSaturation(1f - 0.25f * t);
+            float dim = 1f - 0.15f * t;
+            ColorMatrix scale = new ColorMatrix();
+            scale.setScale(dim, dim, dim, 1f);
+            m.postConcat(scale);
+            ColorMatrixColorFilter f = new ColorMatrixColorFilter(m);
+            banner.setColorFilter(f);
+            icon.setColorFilter(f);
         }
     }
 }

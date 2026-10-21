@@ -114,6 +114,9 @@
     <!-- The dock band as light frosted glass, like the Inputs, Wi-Fi and Settings pills, so a sky or wallpaper shows
          through it. false (the default) keeps the solid near-black band, or the cinematic shelf's dark glass. -->
     <bool name="dock_glass">false</bool>
+    <!-- Banners toned down so the apps' different art sits together: a little darker and less saturated, with a thin
+         light edge, and back to full colour on the focused tile. -->
+    <bool name="soft_banners">false</bool>
     <!-- A reorder button (two arrows) in the top bar. Off by default: reordering is also in the Settings
          button's long-press menu, so it needs no extra button on screen. -->
     <bool name="reorder_button">false</bool>
