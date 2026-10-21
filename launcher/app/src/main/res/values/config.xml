@@ -137,6 +137,9 @@
     <!-- With rows_below_dock 0: the rows below the dock stay hidden while the dock (or the top bar) has focus, and a
          small "More apps" hint under the dock says Down brings them up. false: the next row peeks in at the bottom. -->
     <bool name="more_apps_hint">false</bool>
+    <!-- The app tiles' size, in percent of what fits their columns (60 to 100). Below 100 the tiles keep their
+         columns and the space they give up goes to whatever Home shows above the dock. -->
+    <integer name="tile_size_percent">100</integer>
     <!-- The app library as a round button in the top bar, beside Settings (app_library must be on too). -->
     <bool name="library_button">false</bool>
     <!-- With icon_only_buttons: keep the network name on the Wi-Fi pill up to this width in dp, cut with an ellipsis.

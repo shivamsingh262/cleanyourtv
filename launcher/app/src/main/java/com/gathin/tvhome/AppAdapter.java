@@ -98,12 +98,15 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
      * highlight, capped at the design size so 4 columns on a 1080p TV look exactly as before.
      */
     static int tileWidthPx(int innerWidthPx, int columns, float density) {
-        int design = Math.round(DESIGN_W_DP * density);
+        int design = Math.round(DESIGN_W_DP * density * sizeScale);
         if (innerWidthPx <= 0 || columns <= 0) return design;
         int cell = innerWidthPx / columns;
         int fit = (int) ((cell - 12 * density) / FOCUS_SCALE);
-        return Math.max(Math.round(80 * density), Math.min(design, fit));
+        return Math.max(Math.round(80 * density), Math.round(Math.min(design, fit * sizeScale)));
     }
+
+    /** config.xml tile_size_percent / 100: smaller tiles in the same columns, for room elsewhere on Home. */
+    static float sizeScale = 1f;
 
     static int tileHeightPx(int tileWidthPx) {
         return Math.round(tileWidthPx * DESIGN_H_DP / DESIGN_W_DP);

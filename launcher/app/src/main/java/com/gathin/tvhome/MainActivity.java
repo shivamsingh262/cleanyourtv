@@ -444,6 +444,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             grid.setLayoutAnimation(new LayoutAnimationController(
                     AnimationUtils.loadAnimation(this, enterAnim), enterDelay));
         }
+        AppAdapter.sizeScale = Math.max(60, Math.min(100, getResources().getInteger(R.integer.tile_size_percent))) / 100f;
         adapter = new AppAdapter(this, this, COLUMNS, cfg);
         dockApps = cfg.dockApps;
         fillDockLeavesSlots = !cfg.fillDock;
