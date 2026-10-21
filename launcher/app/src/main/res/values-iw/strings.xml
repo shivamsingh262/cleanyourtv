@@ -105,6 +105,15 @@
     <string name="last_opened">נפתח לאחרונה %1$s</string>
     <string name="top_menu">תפריט</string>
     <string name="more_apps">עוד אפליקציות</string>
+    <string name="note_empty">אין פתק. שלחו אחד לבוט הטלגרם.</string>
+    <string name="note_updated">עודכן %1$s</string>
+    <string name="aqi_value">AQI %1$d</string>
+    <string name="aqi_good">טוב</string>
+    <string name="aqi_satisfactory">משביע רצון</string>
+    <string name="aqi_moderate">בינוני</string>
+    <string name="aqi_poor">גרוע</string>
+    <string name="aqi_very_poor">גרוע מאוד</string>
+    <string name="aqi_severe">חמור</string>
     <string name="wifi_all_settings">כל הגדרות ה-Wi-Fi</string>
     <string name="wifi_off">כבוי</string>
     <string name="signal_strong">חזק</string>

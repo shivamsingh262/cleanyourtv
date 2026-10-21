@@ -52,6 +52,16 @@
     <string name="quick_screensaver">Screensaver</string>
     <string name="top_menu">Menu</string>
     <string name="more_apps">More apps</string>
+    <!-- HomePanel: the note card and the air quality on India's NAQI scale. -->
+    <string name="note_empty">No note. Send one to your Telegram bot.</string>
+    <string name="note_updated">Updated %1$s</string>
+    <string name="aqi_value">AQI %1$d</string>
+    <string name="aqi_good">Good</string>
+    <string name="aqi_satisfactory">Satisfactory</string>
+    <string name="aqi_moderate">Moderate</string>
+    <string name="aqi_poor">Poor</string>
+    <string name="aqi_very_poor">Very poor</string>
+    <string name="aqi_severe">Severe</string>
     <!-- network_tray: the Wi-Fi tray under the network pill. -->
     <string name="wifi_all_settings">All Wi-Fi settings</string>
     <string name="wifi_off">Off</string>

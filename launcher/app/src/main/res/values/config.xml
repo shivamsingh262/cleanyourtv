@@ -210,6 +210,15 @@
     <!-- On this day: one of the screensaver photos (tools/photos.sh) taken on today's date in an earlier year, else
          this week, else this month, as a small print on the right of the top shelf. Nothing found: no print. -->
     <bool name="on_this_day">false</bool>
+    <!-- Left of the On this day photo (HomePanel), each off by default and each needing the network (weather):
+         home_notes, a note sent as a Telegram message to your own bot (telegram_bot_token from @BotFather;
+         telegram_owner_id, your numeric Telegram user id, the only sender it accepts); hourly_forecast, the next six
+         hours; air_quality, India's NAQI from Open-Meteo's PM2.5 and PM10 (a ~10 km model grid, not a station). -->
+    <bool name="home_notes">false</bool>
+    <string name="telegram_bot_token" translatable="false"></string>
+    <string name="telegram_owner_id" translatable="false"></string>
+    <bool name="hourly_forecast">false</bool>
+    <bool name="air_quality">false</bool>
 
     <!-- Cinematic top shelf: the focused dock app's artwork, softened, fills the top of the screen in its
          colour; the shelf gets a larger name, a "Last opened" line (from the apps Home opened) and dock position

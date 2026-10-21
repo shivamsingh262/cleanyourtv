@@ -146,6 +146,117 @@
             android:visibility="gone" />
     </LinearLayout>
 
+    <!-- Left of the On this day photo (HomePanel): the owner's note on a glass card, then the next hours' forecast with
+         the air quality at the end of the row. HomePanel places it in code; gone unless home_notes, hourly_forecast
+         or air_quality is on. -->
+    <LinearLayout
+        android:id="@+id/infoPanel"
+        android:layout_width="600dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|start"
+        android:orientation="vertical"
+        android:alpha="0"
+        android:visibility="gone"
+        android:focusable="false">
+
+        <LinearLayout
+            android:id="@+id/noteCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/note_card"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            android:paddingTop="14dp"
+            android:paddingBottom="14dp">
+
+            <TextView
+                android:id="@+id/noteText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="3"
+                android:ellipsize="end"
+                android:lineSpacingMultiplier="1.08"
+                android:textColor="#F2FFFFFF"
+                android:textSize="18sp"
+                android:fontFamily="@font/outfit_regular" />
+
+            <TextView
+                android:id="@+id/noteMeta"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:singleLine="true"
+                android:textColor="#80FFFFFF"
+                android:textSize="12sp"
+                android:fontFamily="@font/outfit_medium"
+                android:letterSpacing="0.04" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/hoursBlock"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <LinearLayout
+                android:id="@+id/hoursRow"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="horizontal" />
+
+            <LinearLayout
+                android:id="@+id/aqiBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/note_card"
+                android:paddingStart="14dp"
+                android:paddingEnd="16dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp">
+
+                <View
+                    android:id="@+id/aqiDot"
+                    android:layout_width="12dp"
+                    android:layout_height="12dp" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/aqiValue"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:singleLine="true"
+                        android:textColor="#F2FFFFFF"
+                        android:textSize="16sp"
+                        android:fontFamily="@font/outfit_medium"
+                        android:includeFontPadding="false" />
+
+                    <TextView
+                        android:id="@+id/aqiLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:singleLine="true"
+                        android:textColor="#A6FFFFFF"
+                        android:textSize="12sp"
+                        android:fontFamily="@font/outfit_regular"
+                        android:includeFontPadding="false" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+
     <!-- more_apps_hint: under the dock while the rows below it are hidden; Down brings them up. -->
     <TextView
         android:id="@+id/moreHint"

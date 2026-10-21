@@ -96,6 +96,18 @@ final class HomeInfo {
     private Bitmap memoryBitmap;
     /** config.xml top_menu: the print has the top right to itself (see OPEN_*). */
     private final boolean roomy;
+    /** The note, hourly forecast and air quality left of the photo, and where the note comes from. */
+    private final HomePanel panel;
+    private final TelegramNotes telegram;
+    private final boolean airOn;
+    private static final long NOTE_POLL_MS = 45_000L, PANEL_TICK_MS = 60_000L;
+    private final Runnable panelTick = new Runnable() {
+        @Override
+        public void run() {
+            panel.refresh();   // the hour moves on, "updated 5 minutes ago" ages
+            main.postDelayed(this, PANEL_TICK_MS);
+        }
+    };
 
     HomeInfo(Activity activity) {
         this.activity = activity;
@@ -132,6 +144,21 @@ final class HomeInfo {
             memoryKicker.setVisibility(View.GONE);
             // Only "2 years ago" on the photo: it says when.
         }
+        boolean net = activity.checkSelfPermission(android.Manifest.permission.INTERNET)
+                == android.content.pm.PackageManager.PERMISSION_GRANTED;
+        boolean notesOn = res.getBoolean(R.bool.home_notes) && net;
+        String token = res.getString(R.string.telegram_bot_token).trim();
+        long owner = 0;
+        try {
+            owner = Long.parseLong(res.getString(R.string.telegram_owner_id).trim());
+        } catch (NumberFormatException ignored) {
+            // No owner: no sender is trusted, so no note is read.
+        }
+        telegram = notesOn && !token.isEmpty() && owner > 0
+                ? new TelegramNotes(token, owner, activity.getSharedPreferences(TelegramNotes.PREFS, Activity.MODE_PRIVATE))
+                : null;
+        airOn = weatherOn && res.getBoolean(R.bool.air_quality);
+        panel = new HomePanel(activity, prefs, notesOn, weatherOn && res.getBoolean(R.bool.hourly_forecast), airOn);
     }
 
     void start() {
@@ -141,14 +168,31 @@ final class HomeInfo {
         Handler h = new Handler(thread.getLooper());
         bg = h;
         render();   // after the thread: render() schedules its next run only while started
+        panel.refresh();
+        if (panel.on()) main.postDelayed(panelTick, PANEL_TICK_MS);
+        if (telegram != null) {
+            h.post(new Runnable() {
+                @Override
+                public void run() {
+                    if (bg != h) return;
+                    if (telegram.poll()) main.post(panel::refresh);
+                    h.postDelayed(this, NOTE_POLL_MS);
+                }
+            });
+        }
         if (weatherOn) {
             long age = System.currentTimeMillis() - prefs.getLong("at", 0);
+            // A reading kept for another place, or from before the hourly forecast and air quality: fetch now.
+            String place = String.format(Locale.ROOT, "%.2f,%.2f", latitude, longitude);
+            if (!place.equals(prefs.getString("place", "")) || (airOn && !prefs.contains("aq_json"))) age = WEATHER_MS;
             h.postDelayed(new Runnable() {
                 @Override
                 public void run() {
                     if (bg != h) return;
                     fetchWeather();
+                    if (airOn) fetchAir();
                     main.post(HomeInfo.this::render);
+                    main.post(panel::refresh);
                     h.postDelayed(this, WEATHER_MS);
                 }
             }, Math.max(0, WEATHER_MS - age));
@@ -162,6 +206,7 @@ final class HomeInfo {
 
     void stop() {
         main.removeCallbacks(renderAgain);
+        main.removeCallbacks(panelTick);
         if (thread == null) return;
         bg.removeCallbacksAndMessages(null);
         thread.quit();
@@ -174,6 +219,16 @@ final class HomeInfo {
         if (y == dockTop || y <= 0) return;
         dockTop = y;
         layoutMemory();
+        layoutPanel();
+    }
+
+    /** The panel fills the room left of the photo (or of where the photo is at its widest, before one shows). */
+    private void layoutPanel() {
+        if (!panel.on() || dockTop <= 0) return;
+        android.util.DisplayMetrics dm = activity.getResources().getDisplayMetrics();
+        int photoLeft = memoryFound && memory.getWidth() > 0 ? memory.getLeft()
+                : Math.round(dm.widthPixels * (1 - MAX_W_FRACTION) - 56 * dm.density);
+        panel.layout(line, dockTop, photoLeft);
     }
 
     /** The caption's fade spans the photo (a lone match_parent child would keep the last photo's width). */
@@ -198,6 +253,7 @@ final class HomeInfo {
         lp.height = Math.round(h);
         memoryPhoto.setLayoutParams(lp);
         fitCaption(lp.width);
+        memory.post(this::layoutPanel);   // once the photo has its new width
     }
 
     /**
@@ -233,6 +289,7 @@ final class HomeInfo {
     /** The shelf shows or hides: the print goes with it. */
     void showWithShelf(boolean shown, boolean animate) {
         shelfShown = shown;
+        panel.show(shown, animate);
         if (memory == null || !memoryFound) return;
         float alpha = shown ? 1f : 0f;
         memory.animate().cancel();
@@ -348,7 +405,7 @@ final class HomeInfo {
     }
 
     /** The picture for a WMO code, with the moon in place of the sun at night. */
-    private static int conditionIcon(int code, boolean day) {
+    static int conditionIcon(int code, boolean day) {
         if (code == 0) return day ? R.drawable.wx_clear_day : R.drawable.wx_clear_night;
         if (code == 1 || code == 2) return day ? R.drawable.wx_partly_cloudy_day : R.drawable.wx_partly_cloudy_night;
         if (code == 45 || code == 48) return R.drawable.wx_fog;
@@ -357,6 +414,17 @@ final class HomeInfo {
         if ((code >= 71 && code <= 77) || code == 85 || code == 86) return R.drawable.wx_snow;
         if (code >= 95) return R.drawable.wx_thunder;
         return R.drawable.wx_cloudy;
+    }
+
+    /** Sunrise and sunset at config.xml's place on date, minutes of the day, or null without a place. */
+    static int[] sunFor(Context c, LocalDate date) {
+        try {
+            double lat = Double.parseDouble(c.getString(R.string.latitude).trim());
+            double lon = Double.parseDouble(c.getString(R.string.longitude).trim());
+            return Sun.riseAndSet(date, lat, lon, ZoneId.systemDefault());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private static String clock(Context c, int minutes) {
@@ -383,6 +451,36 @@ final class HomeInfo {
         return c.getString(id);
     }
 
+    /**
+     * Background thread: the last day and today's hourly PM2.5 and PM10 for the place (Open-Meteo's air-quality
+     * model), kept in prefs for HomePanel's 24-hour NAQI. A failure keeps the last reading.
+     */
+    private void fetchAir() {
+        HttpURLConnection c = null;
+        try {
+            URL url = new URL(String.format(Locale.ROOT,
+                    "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=%.2f&longitude=%.2f"
+                            + "&hourly=pm2_5,pm10&past_days=1&forecast_days=1&timezone=auto", latitude, longitude));
+            c = (HttpURLConnection) url.openConnection();
+            c.setConnectTimeout(TIMEOUT_MS);
+            c.setReadTimeout(TIMEOUT_MS);
+            if (c.getResponseCode() != 200) return;
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            try (InputStream in = c.getInputStream()) {
+                byte[] buf = new byte[4096];
+                int n;
+                while ((n = in.read(buf)) > 0 && out.size() < 128 * 1024) out.write(buf, 0, n);
+            }
+            String json = out.toString("UTF-8");
+            new JSONObject(json).getJSONObject("hourly").getJSONArray("pm2_5");   // only a reading we can use
+            prefs.edit().putString("aq_json", json).apply();
+        } catch (Exception ignored) {
+            // Offline or a bad answer: the last reading stays.
+        } finally {
+            if (c != null) c.disconnect();
+        }
+    }
+
     /** Background thread: one request for now and today, kept in prefs. A failure keeps the last reading. */
     private void fetchWeather() {
         HttpURLConnection c = null;
@@ -390,6 +488,7 @@ final class HomeInfo {
             URL url = new URL(String.format(Locale.ROOT,
                     "https://api.open-meteo.com/v1/forecast?latitude=%.2f&longitude=%.2f"
                             + "&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min"
+                            + "&hourly=temperature_2m,weather_code&forecast_hours=8"
                             + "&timezone=auto&forecast_days=1", latitude, longitude));
             c = (HttpURLConnection) url.openConnection();
             c.setConnectTimeout(TIMEOUT_MS);
@@ -403,7 +502,8 @@ final class HomeInfo {
             }
             String json = out.toString("UTF-8");
             new JSONObject(json).getJSONObject("current").getDouble("temperature_2m");   // only a reading we can use
-            prefs.edit().putString("json", json).putLong("at", System.currentTimeMillis()).apply();
+            prefs.edit().putString("json", json).putLong("at", System.currentTimeMillis())
+                    .putString("place", String.format(Locale.ROOT, "%.2f,%.2f", latitude, longitude)).apply();
         } catch (Exception ignored) {
             // Offline or a bad answer: the last reading stays until it is three hours old.
         } finally {
