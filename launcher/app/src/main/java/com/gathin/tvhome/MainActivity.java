@@ -670,6 +670,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             // Still on screen (the quick panel was over it, or Home was already in front): the tiles are current,
             // so only go back to the first one; rebuilding would replay the entrance animation for nothing.
             grid.post(() -> focusTile(0));
+            // Home pressed on Home: the next On this day photo.
+            homeInfo.nextMemoryNow();
         }
     }
 

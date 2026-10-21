@@ -242,7 +242,9 @@ final class HomeInfo {
         if (memoryOn) {
             // A new photo on a new day, after 30 minutes away from Home, or every two hours while it stays up.
             long now = System.currentTimeMillis(), at = prefs.getLong("memAt", 0), away = prefs.getLong("awayAt", now);
-            boolean fresh = !LocalDate.now().equals(memoryDay) || now - away >= MEMORY_AWAY_MS || now - at >= MEMORY_EVERY_MS;
+            boolean fresh = wantNextMemory || !LocalDate.now().equals(memoryDay) || now - away >= MEMORY_AWAY_MS
+                    || now - at >= MEMORY_EVERY_MS;
+            wantNextMemory = false;
             if (fresh || !memoryFound) nextMemory(h);
             h.postDelayed(memoryTick, Math.max(1000, MEMORY_EVERY_MS - (fresh ? 0 : now - at)));
         }
@@ -250,6 +252,7 @@ final class HomeInfo {
     }
 
     private static final long MEMORY_EVERY_MS = 2 * 60 * 60_000L, MEMORY_AWAY_MS = 30 * 60_000L;
+    private boolean wantNextMemory;
 
     private final Runnable memoryTick = new Runnable() {
         @Override
@@ -260,6 +263,20 @@ final class HomeInfo {
             h.postDelayed(this, MEMORY_EVERY_MS);
         }
     };
+
+    /** MainActivity: Home pressed while Home is up; the next photo now, and the two-hour clock starts again. */
+    void nextMemoryNow() {
+        Handler h = bg;
+        if (!memoryOn) return;
+        // Home pauses Home before it hands the press over: then the change waits for start().
+        if (h == null) {
+            wantNextMemory = true;
+            return;
+        }
+        h.removeCallbacks(memoryTick);
+        nextMemory(h);
+        h.postDelayed(memoryTick, MEMORY_EVERY_MS);
+    }
 
     private void nextMemory(Handler h) {
         LocalDate today = LocalDate.now();
