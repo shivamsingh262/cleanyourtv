@@ -7,7 +7,7 @@
 #
 # Based on examples/sony-bravia-4k-vh21 (same firmware build).
 # Kept by owner's choice: Google Assistant (katniss, voicesearch, assistantadapter), Chromecast (mediashell),
-# AirPlay/HomeKit, Sony updates, Apple TV app, Google TV movies, text-to-speech, UEI QuickSet.
+# AirPlay/HomeKit, YouTube Music (re-enabled for the launcher's Now playing), Sony updates, Apple TV app, Google TV movies, text-to-speech, UEI QuickSet.
 # Kept as unclear: com.sony.dtv.sensingfusionservice (backed by a running sensingFusion HAL, likely the
 # ambient light sensor) and com.sony.dtv.frame.
 # Live TV / input app: com.sony.dtv.tvx. Keep tvinput.*, braviasync*, tvapi, sonysystemservice, imeproxy,
@@ -31,7 +31,6 @@ com.vewd.core.integration.dia     # Vewd
 com.vewd.core.service
 
 # Batch 2: extras the owner doesn't use
-com.google.android.youtube.tvmusic
 com.google.android.play.games
 com.sony.dtv.seeds.iot            # Sony smart-home / phone-app link (BRAVIA Connect)
 com.sony.dtv.seeds.iot.remotestart
