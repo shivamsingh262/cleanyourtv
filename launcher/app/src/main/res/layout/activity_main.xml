@@ -487,8 +487,6 @@
                 android:clipChildren="false"
                 android:overScrollMode="never"
                 android:scrollbars="none"
-                android:requiresFadingEdge="vertical"
-                android:fadingEdgeLength="56dp"
                 android:descendantFocusability="afterDescendants" />
         </FrameLayout>
     </LinearLayout>
