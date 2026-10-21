@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- One photo print in the Photos screensaver: the whole photo on a white card, with a wider strip at the
-     bottom for the date. PhotoDream sizes the photo to its own shape, so nothing is cropped.
-     The outer frame is a clear margin the card and its shadow are drawn into as one hardware layer: tilted, the
-     layer is filtered as a whole, so the card's edges come out smooth instead of stair-stepped. -->
+<!-- One photo in the Photos screensaver: the whole photo with rounded corners and a soft shadow, as Home's On this
+     day photo is drawn, with its month and year in white over a fade along its foot. PhotoDream sizes the photo to
+     its own shape, so nothing is cropped.
+     The outer frame is a clear margin the photo and its shadow are drawn into as one hardware layer: tilted, the
+     layer is filtered as a whole, so the edges come out smooth instead of stair-stepped. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
@@ -10,15 +11,12 @@
     android:clipToPadding="false"
     android:clipChildren="false">
 
-    <LinearLayout
+    <FrameLayout
+        android:id="@+id/printCard"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="@drawable/print_card"
-        android:elevation="16dp"
-        android:paddingStart="10dp"
-        android:paddingTop="10dp"
-        android:paddingEnd="10dp">
+        android:background="@drawable/memory_card"
+        android:elevation="16dp">
 
         <ImageView
             android:id="@+id/printPhoto"
@@ -30,11 +28,20 @@
         <TextView
             android:id="@+id/printDate"
             android:layout_width="match_parent"
-            android:layout_height="38dp"
-            android:gravity="center"
-            android:textColor="#FF3A3330"
-            android:textSize="20sp"
-            android:fontFamily="@font/caveat"
-            android:includeFontPadding="false" />
-    </LinearLayout>
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:background="@drawable/memory_caption_fade"
+            android:gravity="start|bottom"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="32dp"
+            android:paddingBottom="12dp"
+            android:singleLine="true"
+            android:textColor="#F2FFFFFF"
+            android:textSize="16sp"
+            android:fontFamily="@font/outfit_medium"
+            android:letterSpacing="0.04"
+            android:shadowColor="#80000000"
+            android:shadowRadius="4" />
+    </FrameLayout>
 </FrameLayout>

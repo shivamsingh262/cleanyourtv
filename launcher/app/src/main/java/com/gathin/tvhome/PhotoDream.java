@@ -30,8 +30,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Screensaver: the owner's photos as three prints on the home screen's time-of-day sky, each the whole photo on a white card
- * with its month and year written underneath. Every 15 seconds the three slide off to the left one after another
+ * Screensaver: the owner's photos as three prints on the home screen's time-of-day sky, each the whole photo with
+ * rounded corners and its month and year written on it. Every 15 seconds the three slide off to the left one after another
  * and three new ones are dealt in from the right, each at a slight tilt. A line along the bottom carries the
  * time, the date and Home's weather. Photos
  * come from files/photos (tools/photos.sh puts them there); with none it shows the clock scene (ClockDream)
@@ -48,8 +48,8 @@ public class PhotoDream extends DreamService {
     private static final int LANDSCAPE_W_DP = 300, PORTRAIT_H_DP = 320;
     /** Each print's tilt, in degrees (the third value); deal() works out where each one lies. */
     private static final int[][] REST = {{0, 0, -5}, {0, 0, 3}, {0, 0, -2}};
-    /** The white card around the photo: 10 dp on three sides, a 38 dp strip for the date below. */
-    private static final int CARD_SIDES_DP = 20, CARD_TOPBOTTOM_DP = 48;
+    /** No card around the photo: the date sits on it, so the photo is the whole print. */
+    private static final int CARD_SIDES_DP = 0, CARD_TOPBOTTOM_DP = 0;
     /** Space kept free at the screen's edges and around the clock. */
     /** The gap at the screen's left and right edges and at its top; between two prints; above the clock line. */
     private static final int SIDE_DP = 48, TOP_DP = 20, COLUMN_GAP_DP = 24, STRIP_GAP_DP = 4;
@@ -118,6 +118,7 @@ public class PhotoDream extends DreamService {
             cards[i] = inflater.inflate(R.layout.dream_print, stage, false);
             // Drawn into a layer with a clear margin, the tilted card is filtered as one image: smooth edges.
             cards[i].setLayerType(View.LAYER_TYPE_HARDWARE, null);
+            cards[i].findViewById(R.id.printCard).setClipToOutline(true);   // the photo takes the rounded corners
             photoViews[i] = cards[i].findViewById(R.id.printPhoto);
             dateViews[i] = cards[i].findViewById(R.id.printDate);
             cards[i].setTranslationX(screenW * 2f);   // off screen until the first deal
@@ -314,6 +315,11 @@ public class PhotoDream extends DreamService {
             lp.height = p.h;
             photo.setLayoutParams(lp);
             dateViews[i].setText(p.date);
+            // The caption's fade spans the photo: set outright, since a FrameLayout with one match_parent child
+            // keeps that child's width from the last measure, the previous photo's.
+            ViewGroup.LayoutParams dp = dateViews[i].getLayoutParams();
+            dp.width = p.w;
+            dateViews[i].setLayoutParams(dp);
             FrameLayout.LayoutParams cp = (FrameLayout.LayoutParams) card.getLayoutParams();
             cp.leftMargin = Math.round(cx - cw / 2f) - shadowRoom;
             cp.topMargin = Math.round(cy - ch / 2f) - shadowRoom;

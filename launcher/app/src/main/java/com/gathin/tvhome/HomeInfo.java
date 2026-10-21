@@ -176,6 +176,14 @@ final class HomeInfo {
         layoutMemory();
     }
 
+    /** The caption's fade spans the photo (a lone match_parent child would keep the last photo's width). */
+    private void fitCaption(int width) {
+        if (!roomy || width <= 0) return;
+        ViewGroup.LayoutParams dp = memoryDate.getLayoutParams();
+        dp.width = width;
+        memoryDate.setLayoutParams(dp);
+    }
+
     /** Roomy: the photo as large as the room between the top of the screen and the dock allows. */
     private void layoutMemory() {
         if (!roomy || memoryBitmap == null || memoryBitmap.isRecycled() || dockTop <= 0) return;
@@ -189,6 +197,7 @@ final class HomeInfo {
         lp.width = Math.round(h * aspect);
         lp.height = Math.round(h);
         memoryPhoto.setLayoutParams(lp);
+        fitCaption(lp.width);
     }
 
     /**
@@ -496,6 +505,7 @@ final class HomeInfo {
         lp.width = w;
         lp.height = h;
         memoryPhoto.setLayoutParams(lp);
+        fitCaption(lp.width);
         layoutMemory();
         memoryKicker.setText(head);
         memoryDate.setText(date);
