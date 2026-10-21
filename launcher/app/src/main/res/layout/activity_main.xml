@@ -325,16 +325,14 @@
         </LinearLayout>
     </LinearLayout>
 
-    <!-- more_apps_hint: a chevron on the dock band's lower edge, like a tab, while the dock has focus and the rows
+    <!-- more_apps_hint: a chevron inside the dock band, under the middle tile, while the dock has focus and the rows
          below are hidden; Down brings them up. -->
     <ImageView
         android:id="@+id/moreHint"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
         android:layout_gravity="bottom|center_horizontal"
-        android:layout_marginBottom="9dp"
-        android:padding="3dp"
-        android:background="@drawable/more_hint_tab"
+        android:layout_marginBottom="24dp"
         android:src="@drawable/ic_more_down"
         android:tint="#B3FFFFFF"
         android:contentDescription="@string/more_apps"

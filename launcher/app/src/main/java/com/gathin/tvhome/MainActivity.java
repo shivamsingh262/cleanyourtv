@@ -465,7 +465,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             // Keep the hero below the header when the library is enabled on a short screen,
             // even when the theme requests an extra visible row below the dock.
             int shelfClearance = cfg.appLibrary ? hero.getMeasuredHeight() + (int) (40 * density) : 0;
-            // more_apps_hint: the chevron sits on the band's lower edge rather than under it, so the dock parks lower,
+            // more_apps_hint: the chevron sits inside the band rather than under it, so the dock parks lower,
             // its band ending 27dp from the bottom (Android TV's vertical safe margin) instead of 49dp.
             float bottomRoom = moreAppsHint ? AppAdapter.BOTTOM_ROOM_DP - 22 : AppAdapter.BOTTOM_ROOM_DP;
             int want = Math.max(shelfClearance, h - dockRow - gridRows - (int) (bottomRoom * density));
