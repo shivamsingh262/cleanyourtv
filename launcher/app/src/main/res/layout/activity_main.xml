@@ -329,11 +329,11 @@
          below are hidden; Down brings them up. -->
     <ImageView
         android:id="@+id/moreHint"
-        android:layout_width="30dp"
-        android:layout_height="30dp"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
         android:layout_gravity="bottom|center_horizontal"
-        android:layout_marginBottom="12dp"
-        android:padding="4dp"
+        android:layout_marginBottom="9dp"
+        android:padding="3dp"
         android:background="@drawable/more_hint_tab"
         android:src="@drawable/ic_more_down"
         android:tint="#B3FFFFFF"
