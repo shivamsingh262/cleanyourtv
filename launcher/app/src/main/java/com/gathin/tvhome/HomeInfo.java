@@ -218,14 +218,9 @@ final class HomeInfo {
             });
         }
         if (telegram != null) {
-            h.post(new Runnable() {
-                @Override
-                public void run() {
-                    if (bg != h) return;
-                    if (telegram.poll()) main.post(() -> showAgenda(h));
-                    h.postDelayed(this, NOTE_POLL_MS);
-                }
-            });
+            current = this;
+            startBotPoll(activity.getApplicationContext(), telegram);
+            BOT.post(BOT_POLL);   // and at once, so a message sent while away shows on arrival
         }
         if (weatherOn) {
             long age = System.currentTimeMillis() - prefs.getLong("at", 0);
@@ -270,6 +265,52 @@ final class HomeInfo {
         LocalDate today = LocalDate.now();
         memoryDay = today;
         h.post(() -> chooseMemory(today));
+    }
+
+    // ---- the bot, read in the background ------------------------------------------------------
+    // Not tied to Home being on screen: a note, an event or a photo sent while something else plays is read within a
+    // minute, and a new event's reminder is set at once. One thread for the process (Home's activity can be made
+    // anew); every minute while the screen is on, every five while it is off.
+
+    private static HandlerThread botThread;
+    private static Handler BOT;
+    private static TelegramNotes botNotes;
+    private static Context botContext;
+    private static volatile HomeInfo current;
+    private static final long BOT_OFF_MS = 5 * 60_000L;
+
+    private static final Runnable BOT_POLL = new Runnable() {
+        @Override
+        public void run() {
+            BOT.removeCallbacks(this);
+            boolean changed = botNotes.poll();
+            HomeInfo home = current;
+            if (changed) {
+                if (home != null && home.thread != null) home.main.post(() -> home.showAgenda(home.bg));
+                else {
+                    // Home not on screen: set the reminders from the events kept, without the calendar refresh.
+                    int lead = botContext.getResources().getInteger(R.integer.reminder_minutes);
+                    java.util.List<CalendarFeed.Event> all = new java.util.ArrayList<>(
+                            home != null ? home.calendarEvents : java.util.Collections.emptyList());
+                    all.addAll(TelegramNotes.events(botContext.getSharedPreferences(TelegramNotes.PREFS,
+                            Context.MODE_PRIVATE), java.time.ZonedDateTime.now()));
+                    all.sort((a, b) -> a.start.compareTo(b.start));
+                    if (lead > 0) Reminders.schedule(botContext, all, lead);
+                }
+            }
+            android.os.PowerManager pm = botContext.getSystemService(android.os.PowerManager.class);
+            boolean on = pm == null || pm.isInteractive();
+            BOT.postDelayed(this, on ? NOTE_POLL_MS : BOT_OFF_MS);
+        }
+    };
+
+    private static synchronized void startBotPoll(Context app, TelegramNotes notes) {
+        botContext = app;
+        botNotes = notes;
+        if (botThread != null) return;
+        botThread = new HandlerThread("telegramBot");
+        botThread.start();
+        BOT = new Handler(botThread.getLooper());
     }
 
     void stop() {
