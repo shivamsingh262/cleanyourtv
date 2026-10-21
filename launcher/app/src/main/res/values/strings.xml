@@ -53,7 +53,10 @@
     <string name="top_menu">Menu</string>
     <string name="more_apps">More apps</string>
     <!-- HomePanel: the note card and the air quality on India's NAQI scale. -->
-    <string name="note_updated">Updated %1$s</string>
+    <string name="note_now">now</string>
+    <string name="note_minutes">%1$dm</string>
+    <string name="note_hours">%1$dh</string>
+    <string name="note_yesterday">Yesterday</string>
     <string name="aqi_value">AQI %1$d</string>
     <string name="aqi_good">Good</string>
     <string name="aqi_satisfactory">Satisfactory</string>

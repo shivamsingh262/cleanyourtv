@@ -159,11 +159,13 @@
         android:visibility="gone"
         android:focusable="false">
 
+        <!-- The note, and on its first line at the right how old it is ("5m", "2h", "Yesterday"). -->
         <LinearLayout
             android:id="@+id/noteCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
+            android:orientation="horizontal"
+            android:baselineAligned="true"
             android:background="@drawable/note_card"
             android:paddingStart="20dp"
             android:paddingEnd="20dp"
@@ -172,7 +174,8 @@
 
             <TextView
                 android:id="@+id/noteText"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
+                android:layout_weight="1"
                 android:layout_height="wrap_content"
                 android:maxLines="3"
                 android:ellipsize="end"
@@ -185,10 +188,10 @@
                 android:id="@+id/noteMeta"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
+                android:layout_marginStart="16dp"
                 android:singleLine="true"
                 android:textColor="#80FFFFFF"
-                android:textSize="12sp"
+                android:textSize="13sp"
                 android:fontFamily="@font/outfit_medium"
                 android:letterSpacing="0.04" />
         </LinearLayout>

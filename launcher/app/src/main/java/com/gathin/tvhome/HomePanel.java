@@ -5,7 +5,6 @@ import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.graphics.drawable.GradientDrawable;
 import android.text.format.DateFormat;
-import android.text.format.DateUtils;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -18,6 +17,7 @@ import android.widget.TextView;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -84,8 +84,7 @@ final class HomePanel {
         if (!text.isEmpty()) {
             long at = notes.getLong(TelegramNotes.KEY_AT, 0);
             noteText.setText(text);
-            noteMeta.setText(activity.getString(R.string.note_updated, DateUtils.getRelativeTimeSpanString(
-                    at, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS)));
+            noteMeta.setText(age(at));
         }
         boolean hours = hoursOn && fillHours();
         boolean air = airOn && fillAir();
@@ -95,6 +94,22 @@ final class HomePanel {
         // The forecast keeps its gap under the note only when there is a note above it.
         ((LinearLayout.LayoutParams) hoursBlock.getLayoutParams()).topMargin =
                 text.isEmpty() ? 0 : Math.round(16 * density);
+    }
+
+    /** How old the note is, as a chat app says it: "now", "5m", "2h" today, then "Yesterday", "Mon", "12 Oct". */
+    private String age(long at) {
+        long minutes = (System.currentTimeMillis() - at) / 60_000L;
+        ZoneId zone = ZoneId.systemDefault();
+        LocalDate day = java.time.Instant.ofEpochMilli(at).atZone(zone).toLocalDate();
+        LocalDate today = LocalDate.now(zone);
+        if (day.equals(today)) {
+            if (minutes < 1) return activity.getString(R.string.note_now);
+            if (minutes < 60) return activity.getString(R.string.note_minutes, minutes);
+            return activity.getString(R.string.note_hours, minutes / 60);
+        }
+        if (day.equals(today.minusDays(1))) return activity.getString(R.string.note_yesterday);
+        if (day.isAfter(today.minusDays(7))) return day.format(DateTimeFormatter.ofPattern("EEE", Locale.getDefault()));
+        return day.format(DateTimeFormatter.ofPattern("d MMM", Locale.getDefault()));
     }
 
     /** The next HOURS hours from the forecast HomeInfo kept: time, icon, temperature. */

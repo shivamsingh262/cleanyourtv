@@ -105,7 +105,10 @@
     <string name="last_opened">נפתח לאחרונה %1$s</string>
     <string name="top_menu">תפריט</string>
     <string name="more_apps">עוד אפליקציות</string>
-    <string name="note_updated">עודכן %1$s</string>
+    <string name="note_now">עכשיו</string>
+    <string name="note_minutes">%1$d ד׳</string>
+    <string name="note_hours">%1$d ש׳</string>
+    <string name="note_yesterday">אתמול</string>
     <string name="aqi_value">AQI %1$d</string>
     <string name="aqi_good">טוב</string>
     <string name="aqi_satisfactory">משביע רצון</string>
