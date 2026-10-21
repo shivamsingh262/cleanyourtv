@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Screensaver (PhotoDream): three photo prints on the home screen's time-of-day sky, swept off and dealt in
-     by code, and the thin clock bottom left. -->
+     by code, three across, above a line with the time, date and weather. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/photoRoot"
     android:layout_width="match_parent"
@@ -20,51 +20,46 @@
         android:layout_height="match_parent"
         android:clipChildren="false" />
 
-    <!-- Moved a little at each sweep (PhotoDream.nudgeClock) so it does not burn in. -->
+    <!-- One line along the bottom: the time, the date, and Home's weather and next sunrise or sunset at the right
+         end. Moved a little at each sweep (PhotoDream.nudgeClock) so it does not burn in. -->
     <LinearLayout
         android:id="@+id/photoClock"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|start"
+        android:layout_gravity="bottom"
         android:layout_marginStart="72dp"
-        android:layout_marginBottom="56dp"
-        android:orientation="vertical">
-
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:baselineAligned="true">
-
-            <TextClock
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:format12Hour="h:mm"
-                android:format24Hour="HH:mm"
-                android:textColor="#F2FFFFFF"
-                android:textSize="88sp"
-                android:fontFamily="@font/outfit_extralight"
-                android:letterSpacing="-0.04"
-                android:includeFontPadding="false" />
-
-            <TextClock
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:format12Hour="a"
-                android:format24Hour=""
-                android:textColor="#B3FFFFFF"
-                android:textSize="20sp"
-                android:fontFamily="@font/outfit_medium"
-                android:letterSpacing="0.08"
-                android:textAllCaps="true" />
-        </LinearLayout>
+        android:layout_marginEnd="72dp"
+        android:layout_marginBottom="40dp"
+        android:orientation="horizontal"
+        android:baselineAligned="true">
 
         <TextClock
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
-            android:layout_marginTop="2dp"
+            android:format12Hour="h:mm"
+            android:format24Hour="HH:mm"
+            android:textColor="#F2FFFFFF"
+            android:textSize="56sp"
+            android:fontFamily="@font/outfit_extralight"
+            android:letterSpacing="-0.04"
+            android:includeFontPadding="false" />
+
+        <TextClock
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:format12Hour="a"
+            android:format24Hour=""
+            android:textColor="#B3FFFFFF"
+            android:textSize="16sp"
+            android:fontFamily="@font/outfit_medium"
+            android:letterSpacing="0.08"
+            android:textAllCaps="true" />
+
+        <TextClock
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="22dp"
             android:format12Hour="@string/date_format"
             android:format24Hour="@string/date_format"
             android:textColor="#B3FFFFFF"
@@ -73,16 +68,19 @@
             android:letterSpacing="0.14"
             android:textAllCaps="true" />
 
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
         <!-- Home's weather and next sunrise or sunset (HomeInfo.lineFor); gone without a place. -->
         <TextView
             android:id="@+id/photoInfo"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="4dp"
-            android:layout_marginTop="10dp"
             android:singleLine="true"
             android:textColor="#B3FFFFFF"
-            android:textSize="15sp"
+            android:textSize="16sp"
             android:fontFamily="@font/outfit_regular"
             android:letterSpacing="0.04"
             android:visibility="gone" />

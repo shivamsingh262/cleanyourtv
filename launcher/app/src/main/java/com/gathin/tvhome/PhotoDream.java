@@ -3,7 +3,6 @@ package com.gathin.tvhome;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
-import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.media.ExifInterface;
@@ -33,7 +32,8 @@ import java.util.regex.Pattern;
 /**
  * Screensaver: the owner's photos as three prints on the home screen's time-of-day sky, each the whole photo on a white card
  * with its month and year written underneath. Every 15 seconds the three slide off to the left one after another
- * and three new ones are dealt in from the right, each at a slight tilt. The thin clock stays bottom left. Photos
+ * and three new ones are dealt in from the right, each at a slight tilt. A line along the bottom carries the
+ * time, the date and Home's weather. Photos
  * come from files/photos (tools/photos.sh puts them there); with none it shows the clock scene (ClockDream)
  * instead. No network: nothing leaves the TV.
  */
@@ -51,14 +51,9 @@ public class PhotoDream extends DreamService {
     /** The white card around the photo: 10 dp on three sides, a 38 dp strip for the date below. */
     private static final int CARD_SIDES_DP = 20, CARD_TOPBOTTOM_DP = 48;
     /** Space kept free at the screen's edges and around the clock. */
-    private static final int EDGE_DP = 16, CLOCK_GAP_DP = 12;
-    /** The same gap at the left and right screen edges, and at least this much at the top and bottom. */
-    private static final int SIDE_DP = 40, TOP_DP = 28;
-    /**
-     * Evening out a set: the two prints on the right at most MAX_AREA_RATIO apart; and at most FIRST_AREA_RATIO times
-     * the first one, which the room above the clock keeps smaller.
-     */
-    private static final float MAX_AREA_RATIO = 1.3f, FIRST_AREA_RATIO = 1.8f;
+    /** The gap at the screen's left and right edges and at its top; between two prints; above the clock line. */
+    private static final int SIDE_DP = 48, TOP_DP = 28, COLUMN_GAP_DP = 24, STRIP_GAP_DP = 20;
+
     /** Random play around REST, so no two sets lie the same way. */
     private static final int JITTER_DP = 14, JITTER_DEG = 2;
     /** The most any print tilts: the steepest REST tilt plus JITTER_DEG. */
@@ -172,13 +167,11 @@ public class PhotoDream extends DreamService {
 
     private void loadNext() {
         int gen = generation;
-        // The first print lies above the clock: its tilted outline may be no taller than the room there.
-        int aboveClock = clockBox().top - Math.round((EDGE_DP + CLOCK_GAP_DP) * density);
         loader.execute(() -> {
             Print[] batch = new Print[PRINTS];
             for (int i = 0; i < PRINTS; i++) {
                 try {
-                    batch[i] = nextPrint(i == 0 ? aboveClock : Integer.MAX_VALUE);
+                    batch[i] = nextPrint(Integer.MAX_VALUE);
                 } catch (OutOfMemoryError e) {
                     batch[i] = null;
                 }
@@ -247,17 +240,11 @@ public class PhotoDream extends DreamService {
         return new int[]{Math.round(w), Math.round(h)};
     }
 
-    /**
-     * The space the clock may take, px: where it is laid out, widened by how far nudgeClock() can move it.
-     * Before the first layout, where its margins and size put it.
-     */
-    private Rect clockBox() {
-        int nudge = Math.round(NUDGE_DP * density);
+    /** The top of the clock line, px, less how far nudgeClock() can lift it. */
+    private int stripTop() {
         int screenH = getResources().getDisplayMetrics().heightPixels;
-        if (clock.getHeight() == 0) {
-            return new Rect(0, screenH - Math.round(200 * density), Math.round(360 * density), screenH);
-        }
-        return new Rect(clock.getLeft() - nudge, clock.getTop() - nudge, clock.getRight() + nudge, clock.getBottom());
+        if (clock.getHeight() == 0) return screenH - Math.round(120 * density);
+        return clock.getTop() - Math.round(NUDGE_DP * density);
     }
 
     /** Slides the prints on screen off to the left, one after another, then deals the new ones in from the right. */
@@ -281,69 +268,19 @@ public class PhotoDream extends DreamService {
     }
 
     /**
-     * Lays the set out: the first print above the clock, the last against the right edge with the same gap as the
-     * first has at the left, the middle one centred between them, the two right-hand ones centred top to bottom.
-     * Sizes are evened out first (MAX_AREA_RATIO). Every print stays clear of the clock as it lies tilted.
+     * Lays the set out in three equal columns above the clock line: each print is as large as its column allows,
+     * tilted as far as it may be, and sits in the middle of it with a little play so no two sets lie the same way.
      */
     private void deal(Print[] batch) {
-        int screenH = getResources().getDisplayMetrics().heightPixels;
-        float side = SIDE_DP * density, top = TOP_DP * density, gap = CLOCK_GAP_DP * density;
-        int sides = Math.round(CARD_SIDES_DP * density), strips = Math.round(CARD_TOPBOTTOM_DP * density);
-        float smallest = Float.MAX_VALUE;
-        for (int i = 1; i < PRINTS; i++) if (batch[i] != null) smallest = Math.min(smallest, (float) batch[i].w * batch[i].h);
-        if (batch[0] != null) smallest = Math.min(smallest, (float) batch[0].w * batch[0].h * FIRST_AREA_RATIO);
-        float[] tilt = new float[PRINTS], hw = new float[PRINTS], hh = new float[PRINTS];
-        int[] cw = new int[PRINTS], ch = new int[PRINTS];
-        for (int i = 0; i < PRINTS; i++) {
-            Print p = batch[i];
-            if (p == null) continue;
-            float area = (float) p.w * p.h;
-            if (i > 0 && area > smallest * MAX_AREA_RATIO) {
-                float k = (float) Math.sqrt(smallest * MAX_AREA_RATIO / area);
-                p.w = Math.round(p.w * k);
-                p.h = Math.round(p.h * k);
-            }
-            tilt[i] = REST[i][2] + (random.nextFloat() * 2 - 1) * JITTER_DEG;
-            cw[i] = p.w + sides;
-            ch[i] = p.h + strips;
-            double rad = Math.toRadians(Math.abs(tilt[i]));
-            hw[i] = (float) (cw[i] * Math.cos(rad) + ch[i] * Math.sin(rad)) / 2f;
-            hh[i] = (float) (cw[i] * Math.sin(rad) + ch[i] * Math.cos(rad)) / 2f;
-        }
-        // The two on the right share the width right of the first print and of the clock (they hang down beside it);
-        // two wide ones shrink to keep a gap between.
-        Rect clockBox = clockBox();
-        float leftEdge = Math.max(batch[0] != null ? side + 2 * hw[0] : side, clockBox.right + gap);
-        float room = screenW - side - leftEdge - 3 * gap * 2;
-        float need = (batch[1] != null ? 2 * hw[1] : 0) + (batch[2] != null ? 2 * hw[2] : 0);
-        if (need > room && need > 0) {
-            float k = room / need;
-            for (int i = 1; i < PRINTS; i++) {
-                Print p = batch[i];
-                if (p == null) continue;
-                p.w = Math.round(p.w * k);
-                p.h = Math.round(p.h * k);
-                cw[i] = p.w + sides;
-                ch[i] = p.h + strips;
-                double rad = Math.toRadians(Math.abs(tilt[i]));
-                hw[i] = (float) (cw[i] * Math.cos(rad) + ch[i] * Math.sin(rad)) / 2f;
-                hh[i] = (float) (cw[i] * Math.sin(rad) + ch[i] * Math.cos(rad)) / 2f;
-            }
-        }
-        float[] cx = new float[PRINTS], cy = new float[PRINTS];
-        cx[0] = side + hw[0];
-        cy[0] = Math.max(top + hh[0], (top + clockBox.top - gap) / 2f);
-        cx[2] = screenW - side - hw[2];
-        float left = leftEdge, right = batch[2] != null ? cx[2] - hw[2] : screenW - side;
-        cx[1] = (left + right) / 2f;
-        for (int i = 1; i < PRINTS; i++) {
-            float jy = (random.nextFloat() * 2 - 1) * JITTER_DP * density;
-            cy[i] = Math.max(top + hh[i], Math.min(screenH - top - hh[i], screenH / 2f + jy));
-            // Reaching down beside the clock: move right of it.
-            if (cx[i] - hw[i] < clockBox.right + gap && cy[i] + hh[i] > clockBox.top - gap) {
-                cx[i] = clockBox.right + gap + hw[i];
-            }
-        }
+        float side = SIDE_DP * density, top = TOP_DP * density, jitter = JITTER_DP * density;
+        float colGap = COLUMN_GAP_DP * density;
+        float areaTop = top, areaBottom = stripTop() - STRIP_GAP_DP * density;
+        float colW = (screenW - 2 * side - (PRINTS - 1) * colGap) / PRINTS;
+        // The box a tilted card must fit, leaving room for the play either way.
+        float boxW = colW - 2 * jitter, boxH = areaBottom - areaTop - 2 * jitter;
+        float sides = CARD_SIDES_DP * density, strips = CARD_TOPBOTTOM_DP * density;
+        double rad = Math.toRadians(MAX_TILT_DEG);
+        float cos = (float) Math.cos(rad), sin = (float) Math.sin(rad);
         for (int i = 0; i < PRINTS; i++) {
             Print p = batch[i];
             View card = cards[i];
@@ -353,6 +290,17 @@ public class PhotoDream extends DreamService {
                 card.setVisibility(View.INVISIBLE);
                 continue;
             }
+            // A photo h tall and a*h wide on its card, tilted, spans (a*h + sides)cos + (h + strips)sin across and
+            // (a*h + sides)sin + (h + strips)cos down: the largest h that fits both ways.
+            float a = (float) p.bitmap.getWidth() / p.bitmap.getHeight();
+            float h = Math.min((boxW - sides * cos - strips * sin) / (a * cos + sin),
+                    (boxH - sides * sin - strips * cos) / (a * sin + cos));
+            p.h = Math.max(1, Math.round(h));
+            p.w = Math.max(1, Math.round(h * a));
+            int cw = p.w + Math.round(sides), ch = p.h + Math.round(strips);
+            float cx = side + colW / 2f + i * (colW + colGap) + (random.nextFloat() * 2 - 1) * jitter;
+            float cy = (areaTop + areaBottom) / 2f + (random.nextFloat() * 2 - 1) * jitter;
+            float tilt = REST[i][2] + (random.nextFloat() * 2 - 1) * JITTER_DEG;
             card.setVisibility(View.VISIBLE);
             photo.setImageBitmap(p.bitmap);
             ViewGroup.LayoutParams lp = photo.getLayoutParams();
@@ -361,20 +309,20 @@ public class PhotoDream extends DreamService {
             photo.setLayoutParams(lp);
             dateViews[i].setText(p.date);
             FrameLayout.LayoutParams cp = (FrameLayout.LayoutParams) card.getLayoutParams();
-            cp.leftMargin = Math.round(cx[i] - cw[i] / 2f);
-            cp.topMargin = Math.round(cy[i] - ch[i] / 2f);
+            cp.leftMargin = Math.round(cx - cw / 2f);
+            cp.topMargin = Math.round(cy - ch / 2f);
             card.setLayoutParams(cp);
             card.animate().cancel();
             card.setTranslationX(screenW + 200f);
-            card.setRotation(tilt[i] + 12f);
-            card.animate().translationX(0f).rotation(tilt[i])
+            card.setRotation(tilt + 12f);
+            card.animate().translationX(0f).rotation(tilt)
                     .setStartDelay(i * IN_STAGGER_MS).setDuration(IN_MS)
                     .setInterpolator(new DecelerateInterpolator(2f)).start();
         }
         clock.bringToFront();
     }
 
-    /** Home's weather and next sunrise or sunset under the date, from the reading Home last kept. */
+    /** Home's weather and next sunrise or sunset at the end of the clock line, from the reading Home last kept. */
     private void showInfo() {
         TextView info = findViewById(R.id.photoInfo);
         if (info == null) return;
