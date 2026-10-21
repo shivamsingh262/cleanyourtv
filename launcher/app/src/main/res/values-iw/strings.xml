@@ -104,4 +104,9 @@
     <string name="race_finished">הדגל המשובץ</string>
     <string name="last_opened">נפתח לאחרונה %1$s</string>
     <string name="top_menu">תפריט</string>
+    <string name="wifi_all_settings">כל הגדרות ה-Wi-Fi</string>
+    <string name="wifi_off">כבוי</string>
+    <string name="signal_strong">חזק</string>
+    <string name="signal_good">טוב</string>
+    <string name="signal_weak">חלש</string>
 </resources>

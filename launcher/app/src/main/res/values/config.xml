@@ -128,6 +128,10 @@
          Frees the top right of Home (for the On this day print). Off by default; works best with
          icon_only_buttons and inputs_icon_only. -->
     <bool name="top_menu">false</bool>
+    <!-- The network pill drops a tray like Inputs: the network the TV is on, the strongest others nearby and a row
+         for the full Wi-Fi settings, instead of going straight to those settings. Off by default; ignored when
+         vpn_app is set, as the pill opens that app then. -->
+    <bool name="network_tray">false</bool>
     <!-- The app library as a round button in the top bar, beside Settings (app_library must be on too). -->
     <bool name="library_button">false</bool>
     <!-- With icon_only_buttons: keep the network name on the Wi-Fi pill up to this width in dp, cut with an ellipsis.

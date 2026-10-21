@@ -32,6 +32,7 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.net.Uri;
+import android.net.wifi.ScanResult;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
@@ -544,6 +545,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (inputsIconOnly) makeIconOnly((TextView) btnInputs);
         }
         networkPillShown = cfg.showNetworkPill;
+        networkTray = getResources().getBoolean(R.bool.network_tray);
         btnMenu = findViewById(R.id.btnMenu);
         topMenu = getResources().getBoolean(R.bool.top_menu) && btnMenu != null;
         if (topMenu) setUpTopMenu();
@@ -817,7 +819,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         handler.removeCallbacks(minuteTick);
         stopStats();
         homeInfo.stop();
-        if (topMenu && barOpen) setBarOpen(false, false);
         if (diya != null) diya.stop();
         cancelPendingFocusScroll();
         // Nothing of ours stays on screen over another app; an undecided prompt simply returns next time.
@@ -829,6 +830,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onStop() {
         super.onStop();
+        // top_menu: the bar stays out under the quick settings panel (translucent, Home only pauses) as it does
+        // under the inputs menu; once something covers Home it folds back, with focus on the menu button.
+        if (topMenu && barOpen) setBarOpen(false, findViewById(R.id.topButtons).hasFocus());
         started = false;
         unregisterReceiver(packageReceiver);
         unregisterReceiver(timeReceiver);
@@ -2131,6 +2135,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private boolean inputsAvailable;
     private boolean networkPillShown;
     private TextView btnMenu;
+    /** config.xml network_tray: the network pill drops a tray of networks instead of opening Wi-Fi settings. */
+    private boolean networkTray;
     /** The app library button in the top bar (library_button). */
     private View btnLibraryTop;
     /** The open library came from that button: closing it returns there instead of scrolling to the grid's end. */
@@ -2255,6 +2261,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /** The network pill opens the VPN app when one is configured and installed, otherwise Wi-Fi settings. */
     private void openNetworkPill() {
+        if (networkTray && vpnApp.isEmpty()) {
+            showNetworkTray();
+            return;
+        }
         Intent i = vpnApp.isEmpty() ? null : getPackageManager().getLeanbackLaunchIntentForPackage(vpnApp);
         if (i == null && !vpnApp.isEmpty()) i = getPackageManager().getLaunchIntentForPackage(vpnApp);
         open(i != null ? i : systemIntent(Settings.ACTION_WIFI_SETTINGS));
@@ -2509,6 +2519,96 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         });
         openPopup = popup;
         return popup;
+    }
+
+    /**
+     * network_tray: the network pill drops a menu like Inputs: the network the TV is on, the strongest others
+     * nearby, and a row for the full Wi-Fi settings. Android lets no launcher join a network itself, so picking
+     * another network opens the Wi-Fi settings, where it is one more press. The list is what the TV last scanned
+     * (it scans on its own every few minutes); a fresh scan is asked for so the next opening is current.
+     */
+    private void showNetworkTray() {
+        View anchor = findViewById(inputsIconOnly || topMenu || wifiIconOnly ? R.id.topButtons : R.id.btnWifi);
+        View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
+        LinearLayout rows = panel.findViewById(R.id.rows);
+        int width = (int) (240 * density);
+        final PopupWindow popup = glassPopup(panel, width);
+        Runnable wifiSettings = () -> open(systemIntent(Settings.ACTION_WIFI_SETTINGS));
+
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkCapabilities caps = cm != null ? cm.getNetworkCapabilities(cm.getActiveNetwork()) : null;
+        WifiManager wm = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        String current = null;
+        if (caps != null && caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) {
+            addTrayRow(rows, popup, R.drawable.ic_ethernet, getString(R.string.ethernet), getString(R.string.connected),
+                    true, wifiSettings);
+        } else if (wm != null && wm.isWifiEnabled()) {
+            WifiInfo info = wm.getConnectionInfo();
+            String ssid = info != null ? info.getSSID() : null;
+            if (ssid != null && ssid.length() > 1 && !"<unknown ssid>".equals(ssid)) {
+                current = ssid.startsWith("\"") && ssid.endsWith("\"") ? ssid.substring(1, ssid.length() - 1) : ssid;
+                addTrayRow(rows, popup, R.drawable.ic_wifi, current, getString(R.string.connected), true, wifiSettings);
+            }
+        }
+        if (wm != null && !wm.isWifiEnabled()) {
+            addTrayRow(rows, popup, R.drawable.ic_wifi, getString(R.string.wifi), getString(R.string.wifi_off), false,
+                    wifiSettings);
+        } else if (wm != null) {
+            // Strongest first, one row per name, hidden networks left out.
+            Map<String, Integer> best = new java.util.LinkedHashMap<>();
+            List<ScanResult> scans;
+            try {
+                scans = wm.getScanResults();
+            } catch (SecurityException e) {
+                scans = Collections.emptyList();   // no location permission: the tray keeps the current network
+            }
+            scans = new ArrayList<>(scans);
+            scans.sort((a, b) -> Integer.compare(b.level, a.level));
+            for (ScanResult r : scans) {
+                String name = r.SSID;
+                if (name == null || name.isEmpty() || name.equals(current) || best.containsKey(name)) continue;
+                best.put(name, r.level);
+                if (best.size() == 4) break;
+            }
+            if (!best.isEmpty()) addSeparator(rows);
+            for (Map.Entry<String, Integer> e : best.entrySet()) {
+                int level = WifiManager.calculateSignalLevel(e.getValue(), 3);
+                int strength = level >= 2 ? R.string.signal_strong : level == 1 ? R.string.signal_good : R.string.signal_weak;
+                addTrayRow(rows, popup, R.drawable.ic_wifi, e.getKey(), getString(strength), false, wifiSettings);
+            }
+            try {
+                wm.startScan();
+            } catch (SecurityException ignored) {
+                // Without a scan the next opening shows the system's own latest list.
+            }
+        }
+        addSeparator(rows);
+        addTrayRow(rows, popup, R.drawable.ic_settings, getString(R.string.wifi_all_settings), null, false, wifiSettings);
+
+        panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+        popup.setWidth(Math.max(width, Math.min(panel.getMeasuredWidth(), (int) (360 * density))));
+        int alignment = topMenu ? Gravity.START
+                : anchor.getId() == R.id.topButtons || getResources().getBoolean(R.bool.rtl_menu_bar)
+                ? Gravity.END : Gravity.START;
+        dropIn(popup, panel, anchor, alignment);
+        rows.getChildAt(0).requestFocus();
+    }
+
+    /** A row in the network tray: icon, name, an optional status on the right (with the green dot if connected). */
+    private void addTrayRow(LinearLayout rows, PopupWindow popup, int iconRes, String title, String state,
+                            boolean connected, Runnable action) {
+        View row = getLayoutInflater().inflate(R.layout.item_input, rows, false);
+        ((ImageView) row.findViewById(R.id.icon)).setImageResource(iconRes);
+        ((TextView) row.findViewById(R.id.title)).setText(title);
+        TextView status = row.findViewById(R.id.status);
+        if (state == null) status.setVisibility(View.GONE);
+        else status.setText(state);
+        row.findViewById(R.id.dot).setVisibility(connected ? View.VISIBLE : View.GONE);
+        row.setOnClickListener(v -> {
+            popup.dismiss();
+            action.run();
+        });
+        rows.addView(row);
     }
 
     /** Drop in: fade and unfold from the top edge, hanging under the anchor pill. */
