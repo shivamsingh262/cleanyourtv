@@ -61,7 +61,7 @@ final class HomeInfo {
     /** The print's photo, dp: a landscape photo's width, a portrait one's height. */
     private static final int MEMORY_LANDSCAPE_W_DP = 196, MEMORY_PORTRAIT_H_DP = 150;
     /** With top_menu the top right is free: a larger print near the top, its heading written in the strip. */
-    private static final int OPEN_LANDSCAPE_W_DP = 190, OPEN_PORTRAIT_H_DP = 140, OPEN_TOP_DP = 26;
+    private static final int OPEN_LANDSCAPE_W_DP = 240, OPEN_PORTRAIT_H_DP = 160, OPEN_TOP_DP = 14;
     /** The date tools/photos.sh puts in each name: photo-0007-20231202.jpg, or only the month, -202312. */
     private static final Pattern NAME_DATE = Pattern.compile("-(\\d{4})(\\d{2})(\\d{2})?\\.[A-Za-z]+$");
 
@@ -116,14 +116,13 @@ final class HomeInfo {
             lp.topMargin = Math.round(OPEN_TOP_DP * res.getDisplayMetrics().density);
             memory.setLayoutParams(lp);
             memoryKicker.setVisibility(View.GONE);
-            // "Oct 2024" and "2 years ago" on two lines of the strip: one line is wider than a portrait print.
+            // Only "2 years ago" in the strip: it says when, so the print keeps the height for the photo.
             ViewGroup.LayoutParams sp = memoryDate.getLayoutParams();
             sp.height = ViewGroup.LayoutParams.WRAP_CONTENT;
             memoryDate.setLayoutParams(sp);
-            memoryDate.setMaxLines(2);
-            memoryDate.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 15);
-            memoryDate.setLineSpacing(0, 0.9f);
-            int pad = Math.round(5 * res.getDisplayMetrics().density);
+            memoryDate.setMaxLines(1);
+            memoryDate.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16);
+            int pad = Math.round(4 * res.getDisplayMetrics().density);
             memoryDate.setPadding(0, pad, 0, pad + pad);
         }
     }
@@ -407,8 +406,8 @@ final class HomeInfo {
         }
         Bitmap bitmap = PhotoDream.decode(pick, w, h);
         if (bitmap == null) return;
-        // Roomy: no line above the print, so "how long ago" goes under the date in the strip.
-        String strip = roomy ? date + "\n" + ago : date;
+        // Roomy: no line above the print, so the strip says how long ago instead of the month and year.
+        String strip = roomy ? ago : date;
         int photoW = w, photoH = h;
         main.post(() -> setMemory(bitmap, head, strip, photoW, photoH));
     }
