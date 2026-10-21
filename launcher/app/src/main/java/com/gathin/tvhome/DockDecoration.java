@@ -62,6 +62,7 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
     @Override
     public void onDraw(@NonNull Canvas c, @NonNull RecyclerView parent, @NonNull RecyclerView.State state) {
         boolean any = false;
+        float firstCardW = 0;
         for (int i = 0; i < parent.getChildCount(); i++) {
             View child = parent.getChildAt(i);
             int pos = parent.getChildAdapterPosition(child);
@@ -74,6 +75,7 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
             float r = l + card.getWidth();
             float b = t + card.getHeight();
             if (!any) {
+                firstCardW = card.getWidth();
                 rect.set(l, t, r, b);
                 any = true;
             } else {
@@ -85,7 +87,10 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
         // The band can only draw inside the grid, and the first and last dock tiles sit 12dp in from its
         // edges: a full 14dp at the sides sliced the rounded ends flat (#454). Keep the sides, with the
         // 1dp edge line, inside the grid; the top and bottom have room.
-        float side = Math.max(0f, Math.min(pad, Math.min(rect.left, parent.getWidth() - rect.right) - density));
+        // A focused end tile grows by FOCUS_SCALE about its centre: leave that growth plus the usual gap at the sides,
+        // where the columns have room (smaller tiles, tile_size_percent), so it never meets the band's edge.
+        float wanted = Math.max(pad, firstCardW * (AppAdapter.FOCUS_SCALE - 1f) / 2f + 12 * density);
+        float side = Math.max(0f, Math.min(wanted, Math.min(rect.left, parent.getWidth() - rect.right) - density));
         rect.inset(-side, -pad);
         rect.bottom += namesRoom;
         // Scrolling the grid carries the dock up past the grid's top edge, which would slice the band into a sliver:
