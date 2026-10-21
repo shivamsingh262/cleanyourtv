@@ -26,8 +26,12 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
     private final float namesRoom;
     /** Light glass like the top bar's pills (config.xml dock_glass): a white tint that fades downwards. */
     private final boolean lightGlass;
-    /** The band spans the grid's whole width, so its ends line up with the text and photo margins (dock_glass). */
-    private final boolean fullWidth;
+    /**
+     * dock_glass: a compact tray. The grid's cells are the tile plus one TRAY_GAP_DP (MainActivity pads the grid to
+     * that), and the band keeps the same gap at its ends, top and bottom: one even spacing all round.
+     */
+    private final boolean tray;
+    static final float TRAY_GAP_DP = 20;
     /** The band's top and bottom the glass gradient was made for; it is remade when they move. */
     private float shaderTop = Float.NaN, shaderBottom = Float.NaN;
     /** The band's own alphas, which the scroll fade below scales. */
@@ -43,7 +47,7 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
         this.density = density;
         this.namesRoom = names ? 22 * density : 0;
         this.lightGlass = lightGlass;
-        this.fullWidth = lightGlass;
+        this.tray = lightGlass;
         band.setColor(translucent ? 0x8C121014 : 0xFF141416);
         edge.setStyle(Paint.Style.STROKE);
         edge.setStrokeWidth(density);
@@ -86,15 +90,16 @@ public class DockDecoration extends RecyclerView.ItemDecoration {
             }
         }
         if (!any) return;
-        float pad = 14 * density;
+        float pad = (tray ? TRAY_GAP_DP : 14) * density;
         // The band can only draw inside the grid, and the first and last dock tiles sit 12dp in from its
         // edges: a full 14dp at the sides sliced the rounded ends flat (#454). Keep the sides, with the
         // 1dp edge line, inside the grid; the top and bottom have room.
         // A focused end tile grows by FOCUS_SCALE about its centre: leave that growth plus the usual gap at the sides,
         // where the columns have room (smaller tiles, tile_size_percent), so it never meets the band's edge.
-        float wanted = fullWidth ? Float.MAX_VALUE
+        float wanted = tray ? TRAY_GAP_DP * density
                 : Math.max(pad, firstCardW * (AppAdapter.FOCUS_SCALE - 1f) / 2f + 12 * density);
-        float side = Math.max(0f, Math.min(wanted, Math.min(rect.left, parent.getWidth() - rect.right) - density));
+        float side = tray ? wanted
+                : Math.max(0f, Math.min(wanted, Math.min(rect.left, parent.getWidth() - rect.right) - density));
         rect.inset(-side, -pad);
         rect.bottom += namesRoom;
         // Scrolling the grid carries the dock up past the grid's top edge, which would slice the band into a sliver:

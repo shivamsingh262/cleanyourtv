@@ -445,6 +445,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     AnimationUtils.loadAnimation(this, enterAnim), enterDelay));
         }
         AppAdapter.sizeScale = Math.max(60, Math.min(100, getResources().getInteger(R.integer.tile_size_percent))) / 100f;
+        dockTray = cfg.dockRow && getResources().getBoolean(R.bool.dock_glass);
         adapter = new AppAdapter(this, this, COLUMNS, cfg);
         dockApps = cfg.dockApps;
         fillDockLeavesSlots = !cfg.fillDock;
@@ -458,6 +459,20 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             int h = b - t;
             // Item height follows the tile size, which follows the columns and the rows that must fit (AppAdapter.tileWidthPx).
             int inner = (r - l) - grid.getPaddingLeft() - grid.getPaddingRight();
+            if (dockTray) {
+                // The tray: tiles sized as for the full width, then the grid narrowed so every cell is a tile plus
+                // one gap, centred; DockDecoration keeps that gap at the band's ends too.
+                AppAdapter.fixedTileW = 0;
+                int full = r - l;
+                int w = AppAdapter.tileWidthPx(full, h, COLUMNS, rowsBelowDock, cfg.dockTitle, cfg.dockRow, density);
+                AppAdapter.fixedTileW = w;
+                int side = Math.max(0, (full - COLUMNS * (w + Math.round(DockDecoration.TRAY_GAP_DP * density))) / 2);
+                if (grid.getPaddingLeft() != side || grid.getPaddingRight() != side) {
+                    grid.setPadding(side, grid.getPaddingTop(), side, grid.getPaddingBottom());
+                    grid.post(grid::requestLayout);   // set during a layout pass: lay out again with it
+                }
+                inner = full - 2 * side;
+            }
             int tileW = AppAdapter.tileWidthPx(inner, h, COLUMNS, rowsBelowDock, cfg.dockTitle, cfg.dockRow, density);
             int itemH = AppAdapter.itemHeightPx(AppAdapter.tileHeightPx(tileW), density);
             int dockRow = itemH + (int) (AppAdapter.DOCK_EXTRA_DP * density);   // item height plus DockDecoration offsets
@@ -468,6 +483,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             // more_apps_hint: the chevron sits inside the band rather than under it, so the dock parks lower,
             // its band ending 27dp from the bottom (Android TV's vertical safe margin) instead of 49dp.
             float bottomRoom = moreAppsHint ? AppAdapter.BOTTOM_ROOM_DP - 22 : AppAdapter.BOTTOM_ROOM_DP;
+            // The tray's taller band (TRAY_GAP_DP top and bottom instead of 14) keeps the same bottom margin.
+            if (dockTray) bottomRoom += DockDecoration.TRAY_GAP_DP - 14;
             int want = Math.max(shelfClearance, h - dockRow - gridRows - (int) (bottomRoom * density));
             // Where the rows cannot fit even at the smallest tile (3 rows with the title on), the title keeps its
             // room above the dock and the last rows run off the bottom instead of the title drawing over the clock.
@@ -2172,6 +2189,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private TextView btnMenu;
     /** config.xml more_apps_hint, and whether the rows below the dock are hidden right now. */
     private boolean moreAppsHint, belowDockHidden;
+    /** dock_glass: the dock as a compact tray with one even gap (DockDecoration). */
+    private boolean dockTray;
     private View moreHint;
     /** config.xml network_tray: the network pill drops a tray of networks instead of opening Wi-Fi settings. */
     private boolean networkTray;

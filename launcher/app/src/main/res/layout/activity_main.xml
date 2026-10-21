@@ -332,7 +332,7 @@
         android:layout_width="16dp"
         android:layout_height="16dp"
         android:layout_gravity="bottom|center_horizontal"
-        android:layout_marginBottom="24dp"
+        android:layout_marginBottom="29dp"
         android:src="@drawable/ic_more_down"
         android:tint="#B3FFFFFF"
         android:contentDescription="@string/more_apps"

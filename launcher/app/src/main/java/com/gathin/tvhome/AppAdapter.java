@@ -97,7 +97,11 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
      * Tile width for a grid of this inner width: the cell minus room for the focus zoom and the glass
      * highlight, capped at the design size so 4 columns on a 1080p TV look exactly as before.
      */
+    /** MainActivity, for dock_glass's tray: the tile width worked out once from the unpadded grid; 0 is off. */
+    static int fixedTileW;
+
     static int tileWidthPx(int innerWidthPx, int columns, float density) {
+        if (fixedTileW > 0) return fixedTileW;
         int design = Math.round(DESIGN_W_DP * density * sizeScale);
         if (innerWidthPx <= 0 || columns <= 0) return design;
         int cell = innerWidthPx / columns;
