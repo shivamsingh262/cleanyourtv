@@ -151,6 +151,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private boolean pillsShown;
     private TextView shamsiDate;
     private TextView stats;
+    /** Weather, sunrise and sunset under the clock, and the "On this day" print on the shelf. */
+    private HomeInfo homeInfo;
     private List<RaceWeekend.Race> raceCalendar;
     private View racePanel;
     private TextView raceKicker, raceHeadline, raceSessions;
@@ -357,6 +359,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         btnWifi = findViewById(R.id.btnWifi);
         shamsiDate = findViewById(R.id.shamsiDate);
         stats = findViewById(R.id.stats);
+        homeInfo = new HomeInfo(this);
         raceCalendar = cfg.raceCalendar;
         racePanel = findViewById(R.id.racePanel);
         raceKicker = findViewById(R.id.raceKicker);
@@ -431,7 +434,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             public void onChildViewDetachedFromWindow(@NonNull View v) {
             }
         });
-        if (dockRow) grid.addItemDecoration(new DockDecoration(COLUMNS, density, cinematic, cfg.alwaysShowNames));
+        if (dockRow) grid.addItemDecoration(new DockDecoration(COLUMNS, density, cinematic, cfg.alwaysShowNames,
+                getResources().getBoolean(R.bool.dock_glass)));
         if (animations) {
             int enterAnim = reducedMotion ? R.anim.tile_enter_reduced : R.anim.tile_enter;
             float enterDelay = reducedMotion ? 0f : 0.06f;
@@ -516,7 +520,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             open(systemIntent(Settings.ACTION_WIFI_SETTINGS));
             return true;
         });
-        btnSettings.setOnClickListener(v -> open(systemIntent(Settings.ACTION_SETTINGS)));
+        // settings_key_panel also covers the pill, so the remote button and the pill open the same thing.
+        btnSettings.setOnClickListener(v -> open(settingsKeyPanel ? new Intent(this, QuickSettingsActivity.class)
+                : systemIntent(Settings.ACTION_SETTINGS)));
         btnReorder = findViewById(R.id.btnReorder);
         btnReorder.setOnClickListener(v -> toggleReorder());
         btnReorder.setVisibility(cfg.reorderButton ? View.VISIBLE : View.GONE);
@@ -670,6 +676,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             pillsShown = true;
         }
         if (showStats) startStats();
+        homeInfo.start();
         sky.update();
         wallpaperPlayer.start();
         handler.postDelayed(minuteTick, MINUTE_MS);
@@ -704,6 +711,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             glassShown = false;
             glass.setAlpha(0f);
             heroShown = false;
+            homeInfo.showWithShelf(false, false);
             hero.setAlpha(0f);
             ambient.setAlpha(0f);
             heroArt.animate().cancel();
@@ -793,6 +801,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         heroArt.animate().cancel();
         handler.removeCallbacks(minuteTick);
         stopStats();
+        homeInfo.stop();
         if (diya != null) diya.stop();
         cancelPendingFocusScroll();
         // Nothing of ours stays on screen over another app; an undecided prompt simply returns next time.
@@ -1291,6 +1300,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 }
             }
             heroShown = true;
+            homeInfo.showWithShelf(true, false);
             return;
         }
 
@@ -1307,6 +1317,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 ambient.animate().alpha(1f).setDuration(600).start();
             }
             heroShown = true;
+            homeInfo.showWithShelf(true, true);
         } else if (changed) {
             if (advancedEffects) hero.animate().cancel();
             hero.animate().alpha(0f).translationX(-12 * density).setDuration(120).withEndAction(() -> {
@@ -1528,6 +1539,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         heroArt.animate().cancel();
         heroArt.setAlpha(0f);
         heroShown = false;
+        homeInfo.showWithShelf(false, false);
         if (!ambientGlow) return;
         if (!animations || reducedMotion) {
             setAmbient(color);
@@ -1552,6 +1564,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         ambient.animate().cancel();
         heroArt.animate().cancel();
         heroShown = false;
+        homeInfo.showWithShelf(false, animations);
         if (animations) {
             hero.animate().alpha(0f).setDuration(reducedMotion ? 100 : 160).start();
             if (ambientGlow) ambient.animate().alpha(0f).setDuration(reducedMotion ? 140 : 300).start();

@@ -146,6 +146,63 @@
             android:visibility="gone" />
     </LinearLayout>
 
+    <!-- On this day (config.xml on_this_day, HomeInfo): one of the screensaver photos taken around today's date
+         in an earlier year, as a tilted print on the right of the top shelf. Shown and hidden with the shelf. -->
+    <LinearLayout
+        android:id="@+id/memory"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="124dp"
+        android:layout_marginEnd="80dp"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:alpha="0"
+        android:visibility="gone"
+        android:focusable="false">
+
+        <TextView
+            android:id="@+id/memoryKicker"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:singleLine="true"
+            android:textColor="#B3FFFFFF"
+            android:textSize="11sp"
+            android:fontFamily="@font/outfit_medium"
+            android:letterSpacing="0.2"
+            android:textAllCaps="true" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#FFFAF7F1"
+            android:elevation="8dp"
+            android:rotation="-3"
+            android:paddingStart="8dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="8dp">
+
+            <ImageView
+                android:id="@+id/memoryPhoto"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:scaleType="fitXY"
+                android:importantForAccessibility="no" />
+
+            <TextView
+                android:id="@+id/memoryDate"
+                android:layout_width="match_parent"
+                android:layout_height="30dp"
+                android:gravity="center"
+                android:textColor="#FF3A3330"
+                android:textSize="17sp"
+                android:fontFamily="@font/caveat"
+                android:includeFontPadding="false" />
+        </LinearLayout>
+    </LinearLayout>
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -290,6 +347,26 @@
                 android:textColor="#D9FFFFFF"
                 android:textSize="14sp"
                 android:fontFamily="@font/outfit_medium"
+                android:letterSpacing="0.04"
+                android:focusable="false"
+                android:visibility="gone" />
+
+            <!-- Weather and sunrise/sunset (config.xml weather, latitude/longitude; HomeInfo). Gone without a place.
+                 Outside leftBlock for the same reason as stats; the two are not meant to be on together. -->
+            <TextView
+                android:id="@+id/homeInfo"
+                android:layout_width="wrap_content"
+                android:layout_below="@id/leftBlock"
+                android:layout_alignStart="@id/leftBlock"
+                android:gravity="left"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_marginTop="4dp"
+                android:singleLine="true"
+                android:ellipsize="end"
+                android:textColor="#CCFFFFFF"
+                android:textSize="15sp"
+                android:fontFamily="@font/outfit_regular"
                 android:letterSpacing="0.04"
                 android:focusable="false"
                 android:visibility="gone" />

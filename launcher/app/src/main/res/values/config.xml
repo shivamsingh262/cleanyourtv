@@ -10,8 +10,8 @@
     <!-- Apps pinned to the dock row at the bottom, in this order. Missing apps are skipped. -->
     <string-array name="dock_apps">
         <item>com.netflix.ninja</item>
-        <item>com.amazon.amazonvideo.livingroom</item>
         <item>com.google.android.youtube.tv</item>
+        <item>com.amazon.amazonvideo.livingroom</item>
         <item>in.startv.hotstar</item>
     </string-array>
     <!-- With fewer dock_apps than columns (or a dock app that is not installed), the free dock slots take
@@ -21,12 +21,11 @@
 
     <!-- Apps never shown as tiles (e.g. the Live TV app, which the Inputs menu already covers). -->
     <string-array name="hidden_apps">
-        <item>com.mediatek.wwtv.tvcenter</item>
-        <item>com.mitv.gallery</item>
+        <item>com.sony.dtv.tvx</item>
     </string-array>
 
     <!-- The TV's Live TV / tuner app, offered at the end of the Inputs menu. Leave empty to omit. -->
-    <string name="live_tv_package" translatable="false">com.mediatek.wwtv.tvcenter</string>
+    <string name="live_tv_package" translatable="false">com.sony.dtv.tvx</string>
 
     <!-- Some TVs give their Live TV app no leanback entry point at all, so `live_tv_package` above
          resolves to nothing (TCL Android TV 9 on China-market sets is one). This action is then sent
@@ -65,6 +64,8 @@
          projector remote's gear button is scancode 384 (KEY_TAPE). Find yours with
          `tools/tv.py 'getevent -lt'` while pressing the button. Leave empty to omit. -->
     <integer-array name="settings_key_scancodes">
+        <!-- Sony KD-65X82L (RMF-TX-series remote, "SONY TV VRC 001"): gear button is 646 (0x286), HID 0x0c0586 -->
+        <item>646</item>
     </integer-array>
     <!-- The same by Android keycode, for buttons whose scancode is shared. TCL Google TV remotes send their
          Settings button as keycode 83 (KEYCODE_NOTIFICATION, which the stock Google TV home turned into its quick
@@ -75,7 +76,7 @@
     <!-- What those Settings buttons open: false, the TV's Settings; true, a small glass panel at the top right
          with TV settings, Display, Network, Apps (re-enable an app) and Launcher settings, over whatever is on screen.
          Both keys can also be set from a theme's config.json ("settings_key_keycodes": [83]). -->
-    <bool name="settings_key_panel">false</bool>
+    <bool name="settings_key_panel">true</bool>
 
     <!-- More remote buttons that open the input switcher, by Android keycode (INPUT_KEY_SERVICE=1
          build-and-install.sh; KEYCODE_TV always does). For buttons only a disabled app answered: the Xiaomi
@@ -111,6 +112,9 @@
          shelf above it. false makes the dock apps simply the first tiles of one plain grid (still in dock_apps
          order, no empty slots), with names under every tile and the glow behind every focused tile. -->
     <bool name="dock_row">true</bool>
+    <!-- The dock band as light frosted glass, like the Inputs, Wi-Fi and Settings pills, so a sky or wallpaper shows
+         through it. false keeps the solid near-black band (or the cinematic shelf's dark glass). config.xml only. -->
+    <bool name="dock_glass">true</bool>
     <!-- A reorder button (two arrows) in the top bar. Off by default: reordering is also in the Settings
          button's long-press menu, so it needs no extra button on screen. -->
     <bool name="reorder_button">false</bool>
@@ -174,12 +178,21 @@
          horizon glow around sunrise and sunset. 0 keeps the plain background (the default); 1 to 100
          sets its opacity. Around 60 reads clearly without hiding a wallpaper. Can also be set with
          "sky_intensity": 60 in a theme's config.json. -->
-    <integer name="sky_intensity">0</integer>
+    <integer name="sky_intensity">60</integer>
     <!-- Where the TV is, in decimal degrees, so the sky's sunrise and sunset glows follow the real sun
          (computed on the TV, no network). Empty: a fixed temperate day, sunset glow around 19:00.
-         Vilnius: 54.69 and 25.28. -->
+         Vilnius: 54.69 and 25.28. Your own place can go in a local override instead (.gitignore, src/release). -->
     <string name="latitude" translatable="false"></string>
     <string name="longitude" translatable="false"></string>
+
+    <!-- Weather under the clock: now, today's high and low (Open-Meteo, free and keyless, for the latitude and
+         longitude above), fetched every 30 minutes and only while Home is on screen. This is the launcher's one use
+         of the network; false turns it off and nothing is fetched. Sunrise and sunset beside it are computed on
+         the TV and show either way, whenever a place is set. -->
+    <bool name="weather">true</bool>
+    <!-- On this day: one of the screensaver photos (tools/photos.sh) taken on today's date in an earlier year, else
+         this week, else this month, as a small print on the right of the top shelf. Nothing found: no print. -->
+    <bool name="on_this_day">true</bool>
 
     <!-- Cinematic top shelf: the focused dock app's artwork, softened, fills the top of the screen in its
          colour; the shelf gets a larger name, a "Last opened" line (from the apps Home opened) and dock position
@@ -190,7 +203,7 @@
     <!-- The glow behind the dock in the focused app's colour (red for YouTube, blue for Prime Video). false keeps
          only background_color or the wallpaper behind everything. Can also be set with "ambient_glow": false in a
          theme's config.json. -->
-    <bool name="ambient_glow">true</bool>
+    <bool name="ambient_glow">false</bool>
     <!-- Minutes Home may sit untouched before it shows the clock screensaver (ClockActivity); 0 turns it off.
          Unlike the system screensaver this never starts over live TV or an app, which matters on TVs whose
          Live TV window does not keep the screen on (CVTE): there the system screensaver would start in the

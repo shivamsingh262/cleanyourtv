@@ -25,6 +25,7 @@
     <string name="stats_memory">Memory %1$d MB free</string>
     <string name="stats_storage">Storage %1$s free</string>
     <string name="dream_name">Clock</string>
+    <string name="photo_dream_name">Photos</string>
     <string name="vpn">VPN</string>
     <string name="vpn_off">VPN off</string>
     <string name="home_settings">Choose default home</string>
@@ -48,6 +49,8 @@
     <string name="quick_network">Network</string>
     <string name="quick_apps">Apps</string>
     <string name="quick_apps_hint">Re-enable</string>
+    <string name="quick_screensaver">Screensaver</string>
+    <string name="quick_screensaver_hint">Start now</string>
     <string name="on">On</string>
     <string name="off">Off</string>
     <string name="enable">Enable</string>
@@ -107,4 +110,28 @@
     <!-- Cinematic top shelf (cinematic_home): the line under the focused dock app's name; %1$s is when it was
          last opened, e.g. "5 minutes ago" or "yesterday, 9:40 pm". -->
     <string name="last_opened">Last opened %1$s</string>
+    <!-- The line under the clock (HomeInfo): now, today's high and low (each after an arrow icon), then the next
+         sunrise or sunset. -->
+    <string name="weather_now">%1$d° %2$s</string>
+    <string name="degrees">%1$d°</string>
+    <string name="sunrise">Sunrise %1$s</string>
+    <string name="sunset">Sunset %1$s</string>
+    <string name="weather_clear">Clear</string>
+    <string name="weather_mostly_clear">Mostly clear</string>
+    <string name="weather_partly_cloudy">Partly cloudy</string>
+    <string name="weather_cloudy">Cloudy</string>
+    <string name="weather_fog">Fog</string>
+    <string name="weather_drizzle">Drizzle</string>
+    <string name="weather_rain">Rain</string>
+    <string name="weather_snow">Snow</string>
+    <string name="weather_showers">Showers</string>
+    <string name="weather_thunder">Thunderstorm</string>
+    <!-- On this day (HomeInfo): above the print; %1$s is how long ago, e.g. "2 years ago". -->
+    <string name="memory_on_this_day">On this day · %1$s</string>
+    <string name="memory_this_week">This week · %1$s</string>
+    <string name="memory_this_month">This month · %1$s</string>
+    <plurals name="memory_years_ago">
+        <item quantity="one">%d year ago</item>
+        <item quantity="other">%d years ago</item>
+    </plurals>
 </resources>

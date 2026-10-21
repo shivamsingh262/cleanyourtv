@@ -8,6 +8,9 @@
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Only for the weather under the clock (config.xml weather, HomeInfo): one request to Open-Meteo every
+         30 minutes while Home is on screen. Nothing else in the launcher uses the network. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <!-- Needed since Android 10 to read the Wi-Fi network name for the network pill. Never requested at
          runtime: build-and-install grants it with pm grant, so lint's Android 12 "ask for COARSE with
@@ -32,6 +35,8 @@
         </intent>
         <!-- China-market MIUI TV firmware: the Settings and Wi-Fi pills fall back to Xiaomi's settings app. -->
         <package android:name="com.xiaomi.mitv.settings" />
+        <!-- The quick settings panel's Screensaver row starts the chosen screensaver through it. -->
+        <package android:name="com.android.systemui" />
     </queries>
 
     <application
@@ -112,6 +117,19 @@
         <service
             android:name=".ClockDream"
             android:label="@string/dream_name"
+            android:exported="true"
+            android:permission="android.permission.BIND_DREAM_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.dreams.DreamService" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </service>
+
+        <!-- Photo screensaver: the owner's photos from files/photos (tools/photos.sh). Pick it in Settings, or
+             `settings put secure screensaver_components com.gathin.tvhome/.PhotoDream` over adb. -->
+        <service
+            android:name=".PhotoDream"
+            android:label="@string/photo_dream_name"
             android:exported="true"
             android:permission="android.permission.BIND_DREAM_SERVICE">
             <intent-filter>

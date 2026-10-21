@@ -30,6 +30,10 @@ public final class QuickSettingsActivity extends Activity {
         addRow(rows, R.drawable.ic_wifi, R.string.quick_network, 0, new Intent(Settings.ACTION_WIFI_SETTINGS));
         addRow(rows, R.drawable.ic_apps, R.string.quick_apps, R.string.quick_apps_hint,
                 new Intent(Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS));
+        // SystemUI's Somnambulator starts whichever screensaver is chosen in Settings, as "Start now" there does.
+        addRow(rows, R.drawable.ic_screensaver, R.string.quick_screensaver, R.string.quick_screensaver_hint,
+                new Intent(Intent.ACTION_MAIN).setClassName("com.android.systemui",
+                        "com.android.systemui.Somnambulator"));
         // Through Home, so it rebuilds with the new choices when Launcher settings closes.
         addRow(rows, R.drawable.ic_home_settings, R.string.launcher_settings, 0,
                 new Intent(this, MainActivity.class).setAction(MainActivity.ACTION_LAUNCHER_SETTINGS));

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Screensaver (PhotoDream): three photo prints on the home screen's time-of-day sky, swept off and dealt in
+     by code, and the thin clock bottom left. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/photoRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FF000000">
+
+    <!-- The same sky as Home, at the same sky_intensity; PhotoDream keeps it on the minute. -->
+    <com.gathin.tvhome.SkyView
+        android:id="@+id/photoSky"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no" />
+
+    <FrameLayout
+        android:id="@+id/prints"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipChildren="false" />
+
+    <!-- Moved a little at each sweep (PhotoDream.nudgeClock) so it does not burn in. -->
+    <LinearLayout
+        android:id="@+id/photoClock"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="72dp"
+        android:layout_marginBottom="56dp"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:baselineAligned="true">
+
+            <TextClock
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:format12Hour="h:mm"
+                android:format24Hour="HH:mm"
+                android:textColor="#F2FFFFFF"
+                android:textSize="88sp"
+                android:fontFamily="@font/outfit_extralight"
+                android:letterSpacing="-0.04"
+                android:includeFontPadding="false" />
+
+            <TextClock
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:format12Hour="a"
+                android:format24Hour=""
+                android:textColor="#B3FFFFFF"
+                android:textSize="20sp"
+                android:fontFamily="@font/outfit_medium"
+                android:letterSpacing="0.08"
+                android:textAllCaps="true" />
+        </LinearLayout>
+
+        <TextClock
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:layout_marginTop="2dp"
+            android:format12Hour="@string/date_format"
+            android:format24Hour="@string/date_format"
+            android:textColor="#B3FFFFFF"
+            android:textSize="16sp"
+            android:fontFamily="@font/outfit_regular"
+            android:letterSpacing="0.14"
+            android:textAllCaps="true" />
+    </LinearLayout>
+</FrameLayout>
