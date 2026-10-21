@@ -69,7 +69,8 @@ final class HomeInfo {
     private final TextView memoryKicker, memoryDate;
     private final Handler main = new Handler(Looper.getMainLooper());
     private final SharedPreferences prefs;
-    private final boolean weatherOn, memoryOn, hasPlace;
+    /** lineOn: config.xml weather with a place set. weatherOn: that, and the build may use the network. */
+    private final boolean lineOn, weatherOn, memoryOn, hasPlace;
     private final double latitude, longitude;
     private HandlerThread thread;
     private Handler bg;
@@ -98,7 +99,11 @@ final class HomeInfo {
         latitude = lat;
         longitude = lon;
         hasPlace = !Double.isNaN(lat) && !Double.isNaN(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180;
-        weatherOn = hasPlace && res.getBoolean(R.bool.weather) && line != null;
+        lineOn = hasPlace && res.getBoolean(R.bool.weather) && line != null;
+        // The launcher ships without network access; a build that adds INTERNET gets the weather, any other
+        // build keeps the line to sunrise and sunset, computed here.
+        weatherOn = lineOn && activity.checkSelfPermission(android.Manifest.permission.INTERNET)
+                == android.content.pm.PackageManager.PERMISSION_GRANTED;
         memoryOn = res.getBoolean(R.bool.on_this_day) && memory != null;
     }
 
@@ -155,7 +160,7 @@ final class HomeInfo {
      * the time moves on without waiting for the next fetch.
      */
     private void render() {
-        if (line == null || !hasPlace) return;
+        if (!lineOn) return;
         main.removeCallbacks(renderAgain);
         ZoneId zone = ZoneId.systemDefault();
         LocalDate today = LocalDate.now(zone);
