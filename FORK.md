@@ -30,10 +30,10 @@ Nothing uses it until you turn one of them on.
 | `home_notes` | A Telegram bot of your own: any text becomes a note on Home, `/event fri 6pm Dinner` adds an event, photos sent to it join the screensaver. Only your own Telegram account is accepted | Telegram |
 
 **Screensaver:** Photos, your own photos as three dated prints on the time-of-day sky, dealt in every 15
-seconds above a clock line with the weather. The screensaver button and the panel's Screensaver row start
-whichever screensaver is chosen in Settings, through SystemUI's Somnambulator as Settings' "Start now" does; on a
-TV whose SystemUI has none, they are left out. Fill it with `tools/photos.sh` from a Mac, or by sending photos to
+seconds above a clock line with the weather. Fill it with `tools/photos.sh` from a Mac, or by sending photos to
 the bot. It is also an add-on for upstream's launcher: [Photo Prints](https://github.com/Gathin23/cleanyourtv/pull/936).
+The screensaver button and the panel's Screensaver row start whichever screensaver is chosen in Settings, through
+SystemUI's Somnambulator as Settings' "Start now" does; on a TV whose SystemUI has none, they are left out.
 
 ## What is sent where
 
