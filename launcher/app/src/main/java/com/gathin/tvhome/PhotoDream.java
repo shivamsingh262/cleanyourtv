@@ -118,6 +118,9 @@ public class PhotoDream extends DreamService {
             cards[i] = inflater.inflate(R.layout.dream_print, stage, false);
             // Drawn into a layer with a clear margin, the tilted card is filtered as one image: smooth edges.
             cards[i].setLayerType(View.LAYER_TYPE_HARDWARE, null);
+            // The same soft halo under every print; Android's elevation shadow leaned a different way under each.
+            cards[i].setBackground(new PrintShadow(getResources().getDimensionPixelSize(R.dimen.print_shadow_room),
+                    16 * density, 22 * density, 4 * density, 0x73000000));
             cards[i].findViewById(R.id.printCard).setClipToOutline(true);   // the photo takes the rounded corners
             photoViews[i] = cards[i].findViewById(R.id.printPhoto);
             dateViews[i] = cards[i].findViewById(R.id.printDate);

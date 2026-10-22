@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- One photo in the Photos screensaver: the whole photo with rounded corners and a soft shadow, as Home's On this
-     day photo is drawn, with its month and year in white over a fade along its foot. PhotoDream sizes the photo to
-     its own shape, so nothing is cropped.
+<!-- One photo in the Photos screensaver: the whole photo with rounded corners, its month and year in white over a
+     fade along its foot, and a soft halo for a shadow (PrintShadow, the outer frame's background). PhotoDream sizes
+     the photo to its own shape, so nothing is cropped.
      The outer frame is a clear margin the photo and its shadow are drawn into as one hardware layer: tilted, the
      layer is filtered as a whole, so the edges come out smooth instead of stair-stepped. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
@@ -15,8 +15,7 @@
         android:id="@+id/printCard"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="@drawable/memory_card"
-        android:elevation="16dp">
+        android:background="@drawable/memory_card">
 
         <ImageView
             android:id="@+id/printPhoto"
