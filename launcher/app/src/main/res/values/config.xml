@@ -208,10 +208,9 @@
     <string name="longitude" translatable="false"></string>
 
     <!-- Weather under the clock: now, today's high and low (Open-Meteo, free and keyless, for the latitude and
-         longitude above), fetched every 30 minutes and only while Home is on screen. The launcher ships without
-         network access: this also needs android.permission.INTERNET added to your own build (for example in a
-         src/release/AndroidManifest.xml); without it the line keeps only the next sunrise or sunset, which is
-         computed on the TV. Needs a place. Off by default. -->
+         longitude above), fetched every 30 minutes and only while Home is on screen. This fork has the INTERNET
+         permission for it (upstream's launcher has none); a build without it keeps the line to the next sunrise or
+         sunset, which is computed on the TV. Needs a place. Off by default. -->
     <bool name="weather">false</bool>
     <!-- On this day: one of the screensaver photos (tools/photos.sh) taken on today's date in an earlier year, else
          this week, else this month, as a small print on the right of the top shelf. Nothing found: no print. -->

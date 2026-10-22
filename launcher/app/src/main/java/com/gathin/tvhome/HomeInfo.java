@@ -142,8 +142,8 @@ final class HomeInfo {
         longitude = lon;
         hasPlace = !Double.isNaN(lat) && !Double.isNaN(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180;
         lineOn = hasPlace && res.getBoolean(R.bool.weather) && line != null;
-        // The launcher ships without network access; a build that adds INTERNET gets the weather, any other
-        // build keeps the line to sunrise and sunset, computed here.
+        // This fork's manifest has INTERNET (upstream's has none); a build without it keeps the line to sunrise and
+        // sunset, computed here.
         weatherOn = lineOn && activity.checkSelfPermission(android.Manifest.permission.INTERNET)
                 == android.content.pm.PackageManager.PERMISSION_GRANTED;
         memoryOn = res.getBoolean(R.bool.on_this_day) && memory != null;

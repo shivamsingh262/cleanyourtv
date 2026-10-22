@@ -8,6 +8,9 @@
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- This fork only (upstream's launcher has no network): the weather, air quality, Telegram notes and photos, and
+         the calendar agenda. Each is off in config.xml until you turn it on; FORK.md says what each one sends. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <!-- reminder_minutes: the banner over other apps (Reminders); granted with appops, never asked for. -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
