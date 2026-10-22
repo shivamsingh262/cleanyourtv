@@ -2,6 +2,7 @@ package com.gathin.tvhome;
 
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -25,6 +26,17 @@ public final class QuickSettingsActivity extends Activity {
     static final String EXTRA_LEFT = "com.gathin.tvhome.extra.PANEL_LEFT";
     static final String EXTRA_TOP = "com.gathin.tvhome.extra.PANEL_TOP";
 
+    /**
+     * SystemUI's Somnambulator, which starts whichever screensaver is chosen in Settings, as "Start now" there does;
+     * null on a TV whose SystemUI has none, so the panel's row and Home's button are left out rather than doing
+     * nothing. The manifest's queries let the launcher see SystemUI.
+     */
+    static Intent screensaverIntent(Context c) {
+        Intent i = new Intent(Intent.ACTION_MAIN).setClassName("com.android.systemui",
+                "com.android.systemui.Somnambulator");
+        return c.getPackageManager().resolveActivity(i, 0) != null ? i : null;
+    }
+
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -45,10 +57,11 @@ public final class QuickSettingsActivity extends Activity {
         addRow(rows, R.drawable.ic_wifi, R.string.quick_network, 0, new Intent(Settings.ACTION_WIFI_SETTINGS));
         addRow(rows, R.drawable.ic_apps, R.string.quick_apps, R.string.quick_apps_hint,
                 new Intent(Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS));
-        // SystemUI's Somnambulator starts whichever screensaver is chosen in Settings, as "Start now" there does.
-        addRow(rows, R.drawable.ic_screensaver, R.string.quick_screensaver, R.string.quick_screensaver_hint,
-                new Intent(Intent.ACTION_MAIN).setClassName("com.android.systemui",
-                        "com.android.systemui.Somnambulator"));
+        Intent screensaver = screensaverIntent(this);
+        if (screensaver != null) {
+            addRow(rows, R.drawable.ic_screensaver, R.string.quick_screensaver, R.string.quick_screensaver_hint,
+                    screensaver);
+        }
         // Through Home, so it rebuilds with the new choices when Launcher settings closes.
         addRow(rows, R.drawable.ic_home_settings, R.string.launcher_settings, 0,
                 new Intent(this, MainActivity.class).setAction(MainActivity.ACTION_LAUNCHER_SETTINGS));

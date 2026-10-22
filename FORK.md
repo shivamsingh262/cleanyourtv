@@ -20,6 +20,7 @@ Nothing uses it until you turn one of them on.
 | `tile_size_percent` | Smaller app tiles in the same columns (60 to 100) | none |
 | `more_apps_hint` | A small chevron in the dock band, only while the dock has focus, saying Down brings up the other apps | none |
 | `top_menu`, `inputs_icon_only`, `network_tray`, `screensaver_button` | One round button after the weather line that slides out Inputs, Wi-Fi and Settings; a Wi-Fi tray with nearby networks; a button that starts the screensaver | none |
+| `settings_key_panel` | The quick settings panel (upstream's, for the remote's Settings button) gains a Screensaver row, and Home's Settings pill opens the same panel | none |
 | `on_this_day` | One of your photos taken on today's date in an earlier year (else this week or month) as a print on the right; Home pressed on Home shows the next one | none |
 | `night_dim` | From 23:00 to 06:00 the photo, panel and apps fade to 60%; any key brings them back for five minutes | none |
 | `weather` | Now, today's high and low and the next sunrise or sunset under the clock, for `latitude` and `longitude` | Open-Meteo |
@@ -29,7 +30,9 @@ Nothing uses it until you turn one of them on.
 | `home_notes` | A Telegram bot of your own: any text becomes a note on Home, `/event fri 6pm Dinner` adds an event, photos sent to it join the screensaver. Only your own Telegram account is accepted | Telegram |
 
 **Screensaver:** Photos, your own photos as three dated prints on the time-of-day sky, dealt in every 15
-seconds above a clock line with the weather. Fill it with `tools/photos.sh` from a Mac, or by sending photos to
+seconds above a clock line with the weather. The screensaver button and the panel's Screensaver row start
+whichever screensaver is chosen in Settings, through SystemUI's Somnambulator as Settings' "Start now" does; on a
+TV whose SystemUI has none, they are left out. Fill it with `tools/photos.sh` from a Mac, or by sending photos to
 the bot. It is also an add-on for upstream's launcher: [Photo Prints](https://github.com/Gathin23/cleanyourtv/pull/936).
 
 ## What is sent where

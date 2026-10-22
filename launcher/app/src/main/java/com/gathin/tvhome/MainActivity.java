@@ -559,12 +559,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         reorderShown = cfg.reorderButton;
         libraryTopShown = cfg.libraryButton && cfg.appLibrary;
         btnScreensaverTop = findViewById(R.id.btnScreensaverTop);
-        screensaverShown = btnScreensaverTop != null && getResources().getBoolean(R.bool.screensaver_button);
+        Intent screensaver = getResources().getBoolean(R.bool.screensaver_button)
+                ? QuickSettingsActivity.screensaverIntent(this) : null;
+        screensaverShown = btnScreensaverTop != null && screensaver != null;
         if (btnScreensaverTop != null) {
             btnScreensaverTop.setVisibility(screensaverShown ? View.VISIBLE : View.GONE);
-            // SystemUI's Somnambulator starts whichever screensaver is chosen in Settings, as "Start now" does.
-            btnScreensaverTop.setOnClickListener(v -> open(new Intent(Intent.ACTION_MAIN).setClassName(
-                    "com.android.systemui", "com.android.systemui.Somnambulator")));
+            btnScreensaverTop.setOnClickListener(v -> open(screensaver));
         }
         iconOnlyButtons = cfg.iconOnlyButtons;
         wifiIconOnly = iconOnlyButtons && cfg.wifiLabelWidth <= 0;
